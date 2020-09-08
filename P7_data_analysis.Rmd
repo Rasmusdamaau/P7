@@ -28,7 +28,7 @@ ggplot(DAX_data, aes(x = date, y = adjusted)) +
   geom_line()
 ```
 
-```{r MA}
+```{r MA 200 BTC}
 #tjek for NA
 NA_BTC <- which(is.na(Bitcoin_data$adjusted) == TRUE)
 BTC_Close <- Bitcoin_data$adjusted[-c(NA_BTC)]
@@ -41,6 +41,27 @@ MA200_BTC <- c(rep(0,200),rollmean(BTC_Close,200))
 ggplot(Bitcoin_data, aes(x = date)) +
   geom_line(aes(y=MA200_BTC), colour = "red")+
   geom_line(aes(y=adjusted), colour = "blue")
+```
+
+```{r Fucktion til MA}
+
+Call_MA <- function(Stock,y,from,to){
+  
+  x <- tq_get(Stock, get = "stock.prices", from = from, to = to)
+  
+  Data <- x[,c(2,8)]
+  
+  Data_nona <- na.omit(Data)
+  
+  MA <- c(rollmean(Data_nona$adjusted,y))
+
+  ggplot(Data_nona[-(1:y-1),], aes(x = date)) +
+  geom_line(aes(y=MA), colour = "red")+
+  geom_line(aes(y=adjusted), colour = "blue")
+}
+
+Call_MA("GC=F",200,"2019-01-01","2020-09-08")
+
 ```
 
 
