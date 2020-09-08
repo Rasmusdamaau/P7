@@ -12,15 +12,29 @@ library(tidyverse)
 ```
 
 
-```{r}
+```{r Plots af rådata}
 
 Pandora_data <- tq_get("PNDORA.CO", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
-ggplot(Pandora_data, aes(x = date, y = close)) +
+ggplot(Pandora_data, aes(x = date, y = adjusted)) +
   geom_line()
 
 Bitcoin_data <- tq_get("BTC-USD", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
 
-ggplot(Bitcoin_data, aes(x = date, y = close)) +
+ggplot(Bitcoin_data, aes(x = date, y = adjusted)) +
+  geom_line()
+
+DAX_data <- tq_get("^GDAXI", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
+ggplot(DAX_data, aes(x = date, y = adjusted)) +
   geom_line()
 ```
+
+```{r MA}
+#tjek for NA
+NA_BTC <- which(is.na(Bitcoin_data$adjusted) == TRUE)
+BTC_Close <- Bitcoin_data$adjusted[-c(NA_BTC)]
+mean(BTC_Close[1:200])
+
+
+```
+
 
