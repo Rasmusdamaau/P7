@@ -9,8 +9,8 @@ Sys.setenv(language="en")
 
 library(tidyquant)
 library(tidyverse)
+library(zoo)
 ```
-
 
 ```{r Plots af rådata}
 
@@ -32,9 +32,15 @@ ggplot(DAX_data, aes(x = date, y = adjusted)) +
 #tjek for NA
 NA_BTC <- which(is.na(Bitcoin_data$adjusted) == TRUE)
 BTC_Close <- Bitcoin_data$adjusted[-c(NA_BTC)]
-mean(BTC_Close[1:200])
 
+MA200_BTC <- c(rep(0,200),rollmean(BTC_Close,200))
 
+#Date_MA <- Bitcoin_data$date[-c(1:200)]
+#MA200_close_BTC <- data.frame(MA200_BTC,Date_MA)
+
+ggplot(Bitcoin_data, aes(x = date)) +
+  geom_line(aes(y=MA200_BTC), colour = "red")+
+  geom_line(aes(y=adjusted), colour = "blue")
 ```
 
 
