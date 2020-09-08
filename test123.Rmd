@@ -10,25 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-tq_get(c("VWS.CO"), get = "stock prices", complete_cases = TRUE)
+Vestas_data <- tq_get("VWS.CO", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
+Vestas <- as.ts(Vestas_data$close)
+plot(Vestas)
 #hello guys
 ```
-hallo
-321
-
-421
-
-3
-32
-
-12
-122
-3
-
-3
-21
-
-3
-2
-1
-3
