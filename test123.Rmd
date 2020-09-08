@@ -1,0 +1,34 @@
+---
+title: "djeah"
+author: "Spørg dig selv"
+date: "8/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+tq_get(c("VWS.CO"), get = "stock prices", complete_cases = TRUE)
+#hello guys
+```
+hallo
+321
+
+421
+
+3
+32
+
+12
+122
+3
+
+3
+21
+
+3
+2
+1
+3
