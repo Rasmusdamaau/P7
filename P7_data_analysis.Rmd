@@ -8,18 +8,19 @@ knitr::opts_chunk$set(echo = TRUE)
 Sys.setenv(language="en")
 
 library(tidyquant)
+library(tidyverse)
 ```
 
 
 ```{r}
 
 Pandora_data <- tq_get("PNDORA.CO", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
-Pandora <- as.ts(Pandora_data$close)
-plot(Pandora)
-#hello guys
+ggplot(Pandora_data, aes(x = date, y = close)) +
+  geom_line()
 
 Bitcoin_data <- tq_get("BTC-USD", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
-Bitcoin <- as.ts(Bitcoin_data$close)
-plot(Bitcoin)
+
+ggplot(Bitcoin_data, aes(x = date, y = close)) +
+  geom_line()
 ```
 
