@@ -8,14 +8,23 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
+2
 ```{r}
 Pandora_data <- tq_get("PNDORA.CO", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
 Pandora <- as.ts(Pandora_data$close)
-plot(Pandora_data&close,Pandora_data$date)
+plot(Pandora)
 #hello guys
 
-Bitcoin_data <- tq_get("BTC-USD", get = "stock.prices", from = "2010-01-01", to = "2020-09-08")
+Bitcoin_data <- tq_get("BTC-USD", get = "stock.prices", from = "2017-01-01", to = "2018-09-08")
 Bitcoin <- as.ts(Bitcoin_data$close)
-plot(Bitcoin)
+btc <- ggplot(Bitcoin_data, aes(date, close))
+btc + geom_line() + geom
+
+
+
+MA50 <- c()
+for (i in 51:length(Bitcoin_data$close)) {
+  MA50[i] <- (sum(Bitcoin_data$close[i-50]:Bitcoin_data$close[i]))/50
+}
+MA50
 ```
