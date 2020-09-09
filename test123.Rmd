@@ -17,8 +17,17 @@ library(zoo)
 
 Bitcoin_data <- tq_get("BTC-USD", get = "stock.prices", from = "2017-01-01", to = "2018-09-08")
 
-btc <- ggplot(Bitcoin_data, aes(date, close))
-  + geom_point()
+btc <- ggplot(Bitcoin_data, aes(x = date)) +
+  geom_line(aes(y = close)) +
+  geom_line(aes(y = rollmean(close,50)))
+  
+btc
+
+
+
+ggplot(Bitcoin_data, aes(x = date)) +
+  geom_line(aes(y=MA200_BTC), colour = "red")+
+  geom_line(aes(y=adjusted), colour = "blue")
 
 
 ```
