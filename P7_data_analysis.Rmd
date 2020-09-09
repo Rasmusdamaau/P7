@@ -45,9 +45,9 @@ ggplot(Bitcoin_data, aes(x = date)) +
 
 ```{r Fucktion til MA}
 
-Call_MA <- function(Stock,y,from,to){
+Call_MA <- function(Stock,y,k){
   
-  x <- tq_get(Stock, get = "stock.prices", from = from, to = to)
+  x <- tq_get(Stock, get = "stock.prices", from = "1980-01-01", to = Sys.Date())
   
   Data <- x[,c(2,8)]
   
@@ -55,12 +55,12 @@ Call_MA <- function(Stock,y,from,to){
   
   MA <- c(rollmean(Data_nona$adjusted,y))
 
-  ggplot(Data_nona[-(1:y-1),], aes(x = date)) +
-  geom_line(aes(y=MA), colour = "red")+
+  ggplot(tail(Data_nona,n=k), aes(x = date)) +
+  geom_line(aes(y=tail(MA,n=k)), colour = "red")+
   geom_line(aes(y=adjusted), colour = "blue")
 }
 
-Call_MA("GC=F",200,"2019-01-01","2020-09-08")
+Call_MA("TSLA",50,50)
 
 ```
 
