@@ -16,7 +16,6 @@ library(tidyverse)
 
 btc <- tq_get("btc-usd")
 
-
 ggplot(btc, aes(x = date, y = close)) +
   geom_line()
 
