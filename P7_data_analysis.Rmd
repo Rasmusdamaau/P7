@@ -20,5 +20,13 @@ ggplot(btc, aes(x = date, y = close)) +
   geom_line()
 
 
+
+data <- btc %>% filter(!is.na(adjusted)) %>%
+  mutate(logr = c(NA, diff(log(adjusted)))) %>% 
+  select(date, logr) %>% na.omit()
+
+ggplot(data) +
+  geom_line(aes(x = date, y = logr))
+
 ```
 
