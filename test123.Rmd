@@ -15,19 +15,24 @@ library(tidyquant)
 library(tidyverse)
 library(zoo)
 
+
+
+Nasdaq100 <- tq_get("^NDX", get = "stock.prices", from = "0000-01-01")
+ggplot(Nasdaq100, aes(x = date)) +
+  geom_line(aes(y=close))
+
+
+
 Bitcoin_data <- tq_get("BTC-USD", get = "stock.prices", from = "2017-01-01", to = "2018-09-08")
 
 btc <- ggplot(Bitcoin_data, aes(x = date)) +
   geom_line(aes(y = close)) +
   geom_line(aes(y = rollmean(close,50)))
-  
+
+rollmean(Bitcoin_data$close,50)
+
+
+
 btc
-
-
-
-ggplot(Bitcoin_data, aes(x = date)) +
-  geom_line(aes(y=MA200_BTC), colour = "red")+
-  geom_line(aes(y=adjusted), colour = "blue")
-
 
 ```
