@@ -47,7 +47,7 @@ ggplot(Bitcoin_data, aes(x = date)) +
 
 Call_MA <- function(Stock,y,k){
   
-  x <- tq_get(Stock, get = "stock.prices", from = "1980-01-01", to = Sys.Date())
+  x <- tq_get(Stock, get = "stock.prices")
   
   Data <- x[,c(2,8)]
   
@@ -60,7 +60,8 @@ Call_MA <- function(Stock,y,k){
   geom_line(aes(y=adjusted), colour = "blue")
 }
 
-Call_MA("TSLA",50,50)
+Call_MA("NQ=F",200,2500)
+
 
 ```
 
