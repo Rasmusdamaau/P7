@@ -5,10 +5,19 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-Sys.setenv(language="en")
+Sys.setenv(language = "en")
 
 library(tidyquant)
 library(tidyverse)
+
+library(tseries)
+library(forecast)
+
+# devtools::install_github("itamarcaspi/rtadfr")
+
+library(rtadfr)
+
+library(styler)
 ```
 
 
@@ -21,12 +30,89 @@ ggplot(btc, aes(x = date, y = close)) +
 
 
 
-data <- btc %>% filter(!is.na(adjusted)) %>%
-  mutate(logr = c(NA, diff(log(adjusted)))) %>% 
-  select(date, logr) %>% na.omit()
+data <- btc %>%
+  filter(!is.na(adjusted)) %>%
+  mutate(logr = c(NA, diff(log(adjusted)))) %>%
+  select(date, logr) %>%
+  na.omit()
 
 ggplot(data) +
   geom_line(aes(x = date, y = logr))
 
+
+nasdaq <- tq_get("^NDX", from = "0000-01-01")
+
+
+adf.test()
+arima(nasdaq$adjusted[100:1000], order = c(1, 0, 0), include.mean = T)
 ```
+
+
+```{r}
+
+obs <- nrow(nasdaq) # Sample size
+r0 <- round(obs * (0.01 + 1.8 / sqrt(obs)))
+# rtadf_nasdaq <- rtadfr::rtadf(y = nasdaq$adjusted, r0 = r0, test = "gsadf")
+
+# rtadf_nasdaq
+```
+
+
+```{r}
+
+library(MultipleBubbles)
+MultipleBubbles::gsadf(m = 1000, t = 50, adflag = 1, mflag = 1, swindow0 = 10)
+Arima()
+
+adf.test()
+```
+
+
+# forsøg på selv at generere DF fordeling
+
+```{r}
+
+
+DF_distri <- function(T_val = 100, seed = 12345, sd_rv = 1, y_0 = 1, n_monte = 10) {
+  set.seed(seed)
+  t_vector <- c()
+  
+  for (j in 1:n_monte) {
+  y <- c()
+  y[1] <- y_0
+  y_fin <- c()
+    
+  for (i in 2:(T_val+T_val/2)) {
+    eps <- rnorm(1, mean = 0, sd = sd_rv)
+    y[i] <- y[i-1] + eps
+    y_fin <- y[((T_val/2)+1):(T_val+T_val/2)]
+  }
+  data <- tibble()
+  data <- tibble(t = 1:T_val,
+                 y = y_fin)
+  model <- list()
+  model <- lm(diff(y) ~ lag(y)[2:100], data = data)
+  
+  t_vector[j] <- summary(model)$coefficients[2,3]
+  }
+  
+  t_95 <- sort(t_vector, decreasing = T)[n_monte * 0.95]
+  t_99 <- sort(t_vector, decreasing = T)[n_monte * 0.99]
+  
+  list_return <- list()
+  list_return <- list(t_vector = t_vector,
+                      quantile_95 = t_95,
+                      quantile_99 = t_99)
+  return(list_return)
+}
+
+df_distr_test <- DF_distri(n_monte = 10000)
+summary(df_distr_test)
+ggplot(data.frame(y = df_distr_test$t_vector), aes(y)) + geom_density()
+df_distr_test$quantile_95
+df_distr_test$quantile_99
+```
+
+
+
 
