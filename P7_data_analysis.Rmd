@@ -10,6 +10,7 @@ Sys.setenv(language="en")
 library(tidyquant)
 library(tidyverse)
 library(zoo)
+library(gridExtra)
 ```
 
 ```{r Plots af rådata}
@@ -47,7 +48,7 @@ ggplot(Bitcoin_data, aes(x = date)) +
 
 Call_MA <- function(Stock,y,k){
   
-  x <- tq_get(Stock, get = "stock.prices")
+  x <- tq_get(Stock, get = "stock.prices", from = "0000-01-01")
   
   Data <- x[,c(2,8)]
   
@@ -60,9 +61,30 @@ Call_MA <- function(Stock,y,k){
   geom_line(aes(y=adjusted), colour = "blue")
 }
 
-Call_MA("NQ=F",200,2500)
+Call_MA("^NDX",200,7000)
+
+data <- btc %>% filter(!is.na(adjusted)) %>%
+  mutate(logr = c(NA, diff(log(adjusted)))) %>% 
+  select(date, logr) %>% na.omit()
+
+ggplot(data) +
+  geom_line(aes(x = date, y = logr))
 
 
 ```
 
+```{r TSLA Og VW plot}
+TSLA_data <- tq_get("TSLA", get = "stock.prices", from = "2019-01-01")
+
+plot_TSLA <- ggplot(TSLA_data, aes(x = date, y = adjusted)) +
+  geom_line() + ggtitle("TSLA")
+
+VOW_data <- tq_get("VOW.DE", get = "stock.prices", from = "2019-01-01")
+
+plot_VOW <- ggplot(VOW_data, aes(x = date, y = adjusted)) +
+  geom_line() + ggtitle("VOW.DE")
+
+grid.arrange(plot_TSLA, plot_VOW, ncol =2 )
+
+```
 
