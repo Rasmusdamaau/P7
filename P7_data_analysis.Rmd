@@ -11,6 +11,9 @@ library(tidyquant)
 library(tidyverse)
 library(zoo)
 library(gridExtra)
+library(tseries)
+library(forecast)
+library(styler)
 ```
 
 ```{r Plots af rådata}
