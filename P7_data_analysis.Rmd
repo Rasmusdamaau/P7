@@ -1,6 +1,6 @@
 ---
 title: "P7_Data_analysis"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -66,12 +66,12 @@ Call_MA <- function(Stock,y,k){
 
 Call_MA("^NDX",200,7000)
 
-data <- btc %>% filter(!is.na(adjusted)) %>%
-  mutate(logr = c(NA, diff(log(adjusted)))) %>% 
-  select(date, logr) %>% na.omit()
+#data <- btc %>% filter(!is.na(adjusted)) %>%
+  #mutate(logr = c(NA, diff(log(adjusted)))) %>% 
+  #select(date, logr) %>% na.omit()
 
-ggplot(data) +
-  geom_line(aes(x = date, y = logr))
+#ggplot(data) +
+  #geom_line(aes(x = date, y = logr))
 
 
 ```
@@ -91,7 +91,7 @@ grid.arrange(plot_TSLA, plot_VOW, ncol =2 )
 
 ```
 
-```{r Generering a t kvantiler}
+```{r Generering af df kvantiler}
 DF_distri <- function(T_val = 100, seed = 12345, sd_rv = 1, y_0 = 1, n_monte = 10) {
   set.seed(seed)
   t_vector <- c()
@@ -146,3 +146,85 @@ df_distr_test$quantile_95
 df_distr_test$quantile_99
 ```
 
+
+```{r udregning af t værdi}
+eps_test <- rnorm(100,0,1)
+  y <- c(1:100)
+  y[1] <- 0
+for (i in 2:100) {
+  y[i] <- y[i-1] + eps_test[i]
+}
+y_ts <- ts(y)
+
+
+d.y <- diff(y_ts)
+plot(d.y)
+
+m.d.y <- mean(d.y)
+s.d.y <- sd(d.y)
+
+```
+
+```{r Funktion der måske ikke skal bruges}
+
+sig.df <- function(timeseries,hyp_0 = 0){
+  
+  estimate <- lm(diff(timeseries) ~ lag(timeseries)[2:length(timeseries)])
+  estimate_fin <- as.numeric(estimate$coefficients[2])
+  
+  print(estimate_fin)
+  
+  t.val <- (estimate_fin-hyp_0)/(sd(timeseries)/sqrt(length(timeseries)))
+  
+  print(t.val)
+  
+  if(t.val > df_distr_test$quantile_90){
+    cat("Ikke significant på 90 \n")
+  }
+    else{
+      cat("Signifikant på 90 \n")
+    }
+
+  if(t.val > df_distr_test$quantile_95){
+    cat("Ikke significant på 95 \n")
+  }
+    else{
+      cat("Signifikant på 95 \n")
+    }
+  if(t.val > df_distr_test$quantile_99){
+    cat("Ikke significant på 99 \n")
+  }
+    else{
+      cat("Signifikant på 99 \n")
+    }
+  
+  return(t.val)
+}
+
+```
+
+```{r tvalue function}
+
+tval <- function(timeseries,hyp_0 = 0){
+  
+  estimate <- lm(diff(timeseries) ~ lag(timeseries)[2:length(timeseries)])
+  estimate_fin <- as.numeric(estimate$coefficients[2])
+  
+  t.val <- (estimate_fin-hyp_0)/(sd(timeseries)/sqrt(length(timeseries)))
+  
+  return(t.val)
+}
+
+x <- tval(y)
+
+```
+
+```{r Udregning af p-værdi}
+  listsort <- sort(df_distr_test$t_vector, decreasing = T)
+  
+  p.value <- function(tval, n_monte = 10000){
+    1-which(abs(listsort-tval)==min(abs(listsort-tval)))/n_monte
+  }
+  
+  p.value(x)
+```
