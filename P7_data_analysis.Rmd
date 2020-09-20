@@ -91,3 +91,58 @@ grid.arrange(plot_TSLA, plot_VOW, ncol =2 )
 
 ```
 
+```{r Generering a t kvantiler}
+DF_distri <- function(T_val = 100, seed = 12345, sd_rv = 1, y_0 = 1, n_monte = 10) {
+  set.seed(seed)
+  t_vector <- c()
+  list_t_greater_0 <- list()
+  k <- 1
+  
+  for (j in 1:n_monte) {
+  y <- c()
+  y[1] <- y_0
+  y_fin <- c()
+    
+  for (i in 2:(T_val+T_val/2)) {
+    eps <- rnorm(1, mean = 0, sd = sd_rv)
+    y[i] <- y[i-1] + eps
+    y_fin <- y[((T_val/2)+1):(T_val+T_val/2)]
+  }
+  data <- tibble()
+  data <- tibble(t = 1:T_val,
+                 y = y_fin)
+  model <- list()
+  model <- lm(diff(y) ~ lag(y)[2:T_val], data = data)
+  
+  if (coef(model)[2] > 0) {
+    list_t_greater_0[[k]] <- list(y = data$y,
+                                model = summary(model),
+                                t_val = summary(model)$coefficients[2,3])
+    k <- k + 1
+  }
+  
+  t_vector[j] <- summary(model)$coefficients[2,3]
+  }
+  
+  t_90 <- sort(t_vector, decreasing = T)[n_monte * 0.90]
+  t_95 <- sort(t_vector, decreasing = T)[n_monte * 0.95]
+  t_99 <- sort(t_vector, decreasing = T)[n_monte * 0.99]
+  
+  list_return <- list()
+  list_return <- list(t_vector = t_vector,
+                      quantile_90 = t_90,
+                      quantile_95 = t_95,
+                      quantile_99 = t_99,
+                      list_0 = list_t_greater_0
+                      )
+  return(list_return)
+}
+
+df_distr_test <- DF_distri(T_val = 50, n_monte = 10000)
+summary(df_distr_test)
+ggplot(data.frame(y = df_distr_test$t_vector), aes(y)) + geom_density()
+df_distr_test$quantile_90
+df_distr_test$quantile_95
+df_distr_test$quantile_99
+```
+
