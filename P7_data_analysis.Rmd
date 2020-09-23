@@ -205,26 +205,22 @@ sig.df <- function(timeseries,hyp_0 = 0){
 
 ```{r tvalue function}
 
-tval <- function(timeseries,hyp_0 = 0){
-  
+tval <- function(timeseries){
   estimate <- lm(diff(timeseries) ~ lag(timeseries)[2:length(timeseries)])
-  estimate_fin <- as.numeric(estimate$coefficients[2])
-  
-  t.val <- (estimate_fin-hyp_0)/(sd(timeseries)/sqrt(length(timeseries)))
-  
-  return(t.val)
+  summary(estimate)$coefficients[2,3]
 }
 
-x <- tval(y)
+tval(y)
+
 
 ```
 
 ```{r Udregning af p-værdi}
-  listsort <- sort(df_distr_test$t_vector, decreasing = T)
+listsort <- sort(df_distr_test$t_vector, decreasing = T)
   
-  p.value <- function(tval, n_monte = 10000){
-    1-which(abs(listsort-tval)==min(abs(listsort-tval)))/n_monte
-  }
-  
-  p.value(x)
+p.value <- function(y,n_monte = 10000){
+  1-which(abs(listsort-tval(y))==min(abs(listsort-tval(y))))/n_monte
+}
+
+p.value(y)
 ```
