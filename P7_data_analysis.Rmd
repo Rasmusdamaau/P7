@@ -219,8 +219,8 @@ tval(y)
 listsort <- sort(df_distr_test$t_vector, decreasing = T)
   
 p.value <- function(y,n_monte = 10000){
-  1-which(abs(listsort-tval(y))==min(abs(listsort-tval(y))))/n_monte
+  1-which(abs(listsort-y)==min(abs(listsort-y)))/n_monte
 }
 
-p.value(y)
+p.value(-2.63)
 ```
