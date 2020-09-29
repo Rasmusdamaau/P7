@@ -5,13 +5,214 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(language = "en")
+
+library(tidyquant)
+library(tidyverse)
+
+library(tseries)
+library(forecast)
+
+# devtools::install_github("itamarcaspi/rtadfr")
+
+library(rtadfr)
+
+library(styler)
 ```
 
 
 ```{r}
 
+btc <- tq_get("btc-usd")
+
+ggplot(btc, aes(x = date, y = close)) +
+  geom_line()
 
 
 
+data <- btc %>%
+  filter(!is.na(adjusted)) %>%
+  mutate(logr = c(NA, diff(log(adjusted)))) %>%
+  select(date, logr) %>%
+  na.omit()
+
+ggplot(data) +
+  geom_line(aes(x = date, y = logr))
+
+
+nasdaq <- tq_get("^NDX", from = "0000-01-01")
+
+
+adf.test()
+arima(nasdaq$adjusted[100:1000], order = c(1, 0, 0), include.mean = T)
 ```
+
+
+```{r}
+
+obs <- nrow(nasdaq) # Sample size
+r0 <- round(obs * (0.01 + 1.8 / sqrt(obs)))
+# rtadf_nasdaq <- rtadfr::rtadf(y = nasdaq$adjusted, r0 = r0, test = "gsadf")
+
+# rtadf_nasdaq
+```
+
+
+```{r}
+
+library(MultipleBubbles)
+MultipleBubbles::gsadf(m = 1000, t = 50, adflag = 1, mflag = 1, swindow0 = 10)
+Arima()
+
+adf.test()
+```
+
+
+# forsøg på selv at generere DF fordeling
+
+```{r}
+
+
+DF_distri <- function(T_val = 100, seed = 12345, sd_rv = 1, y_0 = 1, n_monte = 10) {
+  set.seed(seed)
+  t_vector <- c()
+  list_t_greater_0 <- list()
+  k <- 1
+
+  for (j in 1:n_monte) {
+    y <- c()
+    y[1] <- y_0
+    y_fin <- c()
+
+    for (i in 2:(T_val + T_val / 2)) {
+      eps <- rnorm(1, mean = 0, sd = sd_rv)
+      y[i] <- y[i - 1] + eps
+      y_fin <- y[((T_val / 2) + 1):(T_val + T_val / 2)]
+    }
+    data <- tibble()
+    data <- tibble(
+      t = 1:T_val,
+      y = y_fin
+    )
+    model <- list()
+    model <- lm(diff(y) ~ lag(y)[2:T_val], data = data)
+
+    if (coef(model)[2] > 0) {
+      list_t_greater_0[[k]] <- list(
+        y = data$y,
+        model = summary(model),
+        t_val = summary(model)$coefficients[2, 3]
+      )
+      k <- k + 1
+    }
+
+    t_vector[j] <- summary(model)$coefficients[2, 3]
+  }
+
+  t_95 <- sort(t_vector, decreasing = T)[n_monte * 0.95]
+  t_99 <- sort(t_vector, decreasing = T)[n_monte * 0.99]
+
+  list_return <- list()
+  list_return <- list(
+    t_vector = t_vector,
+    quantile_95 = t_95,
+    quantile_99 = t_99,
+    list_0 = list_t_greater_0
+  )
+  return(list_return)
+}
+
+df_distr_test <- DF_distri(T_val = 50, n_monte = 10000)
+summary(df_distr_test)
+ggplot(data.frame(y = df_distr_test$t_vector), aes(y)) +
+  geom_density()
+df_distr_test$quantile_95
+df_distr_test$quantile_99
+```
+
+
+```{r}
+Bitcoin_data <- tq_get(x = "btc-usd", get = "stock.prices", from = "0000-01-01")
+btc <- na.omit(Bitcoin_data$close)
+
+test_adf <- adf.test(Bitcoin_data$close %>% na.omit(), k = 0, alternative = "stationary")
+
+plot.ts(Bitcoin_data$close)
+
+
+# GSADF <- function(x, min_window) {
+#   n_row_x <- length(x)
+# 
+#   k <- 2
+#   adf_list <- list()
+#   T_vals <- tibble(
+#     t_values = 1,
+#     start_day = 1,
+#     end_day = 1,
+#     interval_length = 1,
+#   )
+#   for (i in 1:(round(n_row_x / min_window))-1) {
+#     if (i == 1) {
+#       adf_list[[1]] <- adf.test(x[1:min_window], alternative = "stationary", k = 0)
+#     }
+#     adf_list[[k]] <- suppressWarnings(
+#       adf.test(x[(i * min_window):((i + 1) * min_window)], alternative = "stationary", k = 0))
+#     T_vals[k, "t_values"] <- adf_list[[k]][["statistic"]][["Dickey-Fuller"]]
+#     T_vals[k, "start_day"] <- i * min_window
+#     T_vals[k, "end_day"] <- ((i + 1) * min_window)
+#     T_vals[k, "interval_length"] <- T_vals[k, "end_day"] - T_vals[k, "start_day"]
+#     k <- k + 1
+#   }
+#   for (j in 1:(round(n_row_x / (min_window*1.5)))-2) {
+#     if (j == 1) {
+#       adf_list[[1]] <- adf.test(x[1:min_window], alternative = "stationary", k = 0)
+#     }
+#     adf_list[[k]] <- suppressWarnings(
+#       adf.test(x[(j * min_window * 1.5):((j + 1) * min_window * 1.5)], alternative = "stationary", k = 0))
+#     T_vals[k, "t_values"] <- adf_list[[k]][["statistic"]][["Dickey-Fuller"]]
+#     T_vals[k, "start_day"] <- j * min_window * 1.5
+#     T_vals[k, "end_day"] <- ((j + 1) * min_window * 1.5)
+#     T_vals[k, "interval_length"] <- T_vals[k, "end_day"] - T_vals[k, "start_day"]
+#     k <- k + 1
+#   }
+#   return(T_vals[-1,])
+# }
+# resul_GSADF <- GSADF(x = btc, min_window = 30)
+
+
+
+GSADF_fun <- function(x, min_window, step_length, max_window=(length(x)-5)) {
+  n_row_x <- length(x)
+  # max_i <- floor(n_row_x/step_length) - min_window
+  adf_list <- list()
+  result <- tibble()
+
+  j <- min_window
+  k_end <- 0
+  while (j <= max_window){
+    k_ind <- 1
+    max_i <- floor((n_row_x - j) / step_length)
+    for (i in 0:(max_i)) {
+    adf_list[[k_ind]] <- suppressWarnings(adf.test(x = x[(step_length*(i)):((step_length*(i)) + j)],
+                              alternative = "stationary",
+                              k = 0))
+    result[k_ind+k_end, "t_value"] <- adf_list[[k_ind]][["statistic"]][["Dickey-Fuller"]]
+    result[k_ind+k_end, "start_day"] <- step_length*(i)
+    result[k_ind+k_end, "end_day"] <- ((step_length*(i)) + j)
+    result[k_ind+k_end, "interval_length"] <- j
+    k_ind <- k_ind + 1
+    }
+    j <- j + 10
+    k_end <- k_ind-1+k_end
+  }
+  result
+}
+
+GSADF_fun_result <- GSADF_fun(x = btc, min_window = 30, step_length = 5)
+GSADF_fun_result
+view(GSADF_fun_result)
+```
+
+
+```{r}
 
