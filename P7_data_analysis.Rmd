@@ -224,3 +224,39 @@ p.value <- function(y,n_monte = 10000){
 
 p.value(-2.63)
 ```
+
+```{r}
+
+Bitcoin_data <- tq_get(x = "btc-usd", get = "stock.prices", from = "0000-01-01")
+btc <- na.omit(Bitcoin_data$close)
+
+test_adf <- adf.test(Bitcoin_data$close %>% na.omit(), k = 0, alternative = "stationary")
+
+plot.ts(Bitcoin_data$close)
+
+
+GSADF_fun <- function(x, min_window, step_length) {
+  n_row_x <- length(x)
+  # max_i <- floor(n_row_x/step_length) - min_window
+  max_i <- floor((n_row_x - min_window) / step_length)
+  
+  adf_list <- list()
+  result <- tibble()
+  k_ind <- 1
+  for (i in 0:max_i) {
+    adf_list[[k_ind]] <- suppressWarnings(adf.test(x = x[(step_length*(i)):((step_length*(i)) + min_window)],
+                              alternative = "stationary",
+                              k = 0))
+    result[k_ind, "t_value"] <- adf_list[[k_ind]][["statistic"]][["Dickey-Fuller"]]
+    result[k_ind, "start_day"] <- step_length*(i)
+    result[k_ind, "end_day"] <- ((step_length*(i)) + min_window)
+    result[k_ind, "interval_length"] <- min_window
+    k_ind <- k_ind + 1
+  }
+  result
+}
+
+GSADF_fun_result <- GSADF_fun(x = btc, min_window = 30, step_length = 5)
+
+plot.ts(rev(Bitcoin_data$close))
+```
