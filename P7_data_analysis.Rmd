@@ -218,11 +218,12 @@ tval(y)
 ```{r Udregning af p-værdi}
 listsort <- sort(df_distr_test$t_vector, decreasing = T)
   
-p.value <- function(y,n_monte = 10000){
+p.value <- function(list, y,n_monte = 10000){
+  listsort <- sort(list, decreasing = T)
   1-which(abs(listsort-y)==min(abs(listsort-y)))/n_monte
 }
 
-p.value(-2.63)
+p.value(list = df_distr_test$t_vector ,-2.63)
 ```
 
 ```{r}
