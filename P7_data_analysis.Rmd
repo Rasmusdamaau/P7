@@ -13,6 +13,8 @@ library(tidyverse)
 library(tseries)
 library(forecast)
 
+library(microbenchmark)
+
 # devtools::install_github("itamarcaspi/rtadfr")
 
 # library(rtadfr)
@@ -38,18 +40,18 @@ DF_distri <- function(T_val = 100, seed = 12345, sd_rv = 1, y_0 = 1, n_monte = 1
     y[1] <- y_0
     y_fin <- c()
 
-    for (i in 2:(T_val + T_val / 2)) {
+    for (i in 2:(T_val + 50)) {
       eps <- rnorm(1, mean = 0, sd = sd_rv)
       y[i] <- y[i - 1] + eps
-      y_fin <- y[((T_val / 2) + 1):(T_val + T_val / 2)]
     }
+    y_fin <- y[(50 + 1):(T_val + 50)]
     data <- tibble()
     data <- tibble(
       t = 1:T_val,
       y = y_fin
     )
     model <- list()
-    model <- lm(diff(y) ~ lag(y)[2:T_val], data = data)
+    model <- lm(diff(y) ~ lag(y)[2:T_val] - 1, data = data)
 
     # if (coef(model)[2] > 0) {
     #   list_t_greater_0[[k]] <- list(
@@ -60,35 +62,37 @@ DF_distri <- function(T_val = 100, seed = 12345, sd_rv = 1, y_0 = 1, n_monte = 1
     #   k <- k + 1
     # }
 
-    t_vector[j] <- summary(model)$coefficients[2, 3]
+    t_vector[j] <- summary(model)$coefficients[1, 3]
   }
-
-  t_95 <- sort(t_vector, decreasing = T)[n_monte * 0.95]
-  t_99 <- sort(t_vector, decreasing = T)[n_monte * 0.99]
+  if (T_vals_only == F) {
+    t_95 <- sort(t_vector, decreasing = T)[n_monte * 0.95]
+    t_99 <- sort(t_vector, decreasing = T)[n_monte * 0.99]
+  }
 
   if (T_vals_only == T) {
     list_return <- t_vector
   }
   if (T_vals_only == F) {
-  list_return <- list(
-    t_vector = t_vector,
-    quantile_95 = t_95,
-    quantile_99 = t_99,
-    list_0 = list_t_greater_0
-  )
+    list_return <- list(
+      t_vector = t_vector,
+      quantile_95 = t_95,
+      quantile_99 = t_99,
+      list_0 = list_t_greater_0
+    )
   }
   return(list_return)
 }
 
-# df_distr_test <- DF_distri(T_val = 50, n_monte = 10000)
+microbenchmark(DF_distri(T_val = 200, n_monte = 10000), times = 1)
+df_distr_test <- DF_distri(T_val = 50, n_monte = 10000)
 
+sort(df_distr_test, decreasing = T)[10000 * 0.99]
 
-# ggplot(data.frame(y = df_distr_test$t_vector), aes(y)) +
-  # geom_density()
+# summary(lm(dist ~ speed - 1, data = cars))$coefficients
+ggplot(data.frame(y = df_distr_test), aes(y)) +
+  geom_density()
 # df_distr_test$quantile_95
 # df_distr_test$quantile_99
-
-
 ```
 
 ```{r}
@@ -96,18 +100,15 @@ DF_distri <- function(T_val = 100, seed = 12345, sd_rv = 1, y_0 = 1, n_monte = 1
 index_T <- seq(from = 30, to = 2200, by = 10)
 df_distri_list <- tibble(.rows = 10000)
 for (i in 1:length(index_T)) {
-  df_distri_list[,i] <- DF_distri(T_val = index_T[i], n_monte = 10000)
+  df_distri_list[, i] <- DF_distri(T_val = index_T[i], n_monte = 10000)
 }
-
-# 
+# save(df_distri_list, file = "Distribution_tibble.RData")
+#
 # tibble_distri <- tibble(.rows = 1000)
 # col_name <- c()
-# 
-# for (i in 1:length(index_T)) {
-#   col_name[i] <- paste("T", index_T[i], sep = "_")
-#   tibble_distri <- bind_cols(tibble_distri, df_distri_list[[i]]["t_vector"])
-# }
-# 
+
+colnames(df_distri_list) <- paste0(rep("T_val_", length(index_T)), index_T)
+
 # colnames(tibble_distri) <- col_name
 ```
 
@@ -116,49 +117,70 @@ for (i in 1:length(index_T)) {
 ```{r}
 
 Bitcoin_data <- tq_get(x = "btc-usd", get = "stock.prices", from = "0000-01-01")
-btc <- na.omit(Bitcoin_data$close)
+btc <- na.omit(Bitcoin_data$adjusted)
+tesla_data <- tq_get(x = "TSLA", get = "stock.prices", from = "0000-01-01", to = "2019-01-01")
+tsla <- na.omit(tesla_data$adjusted)
+danskebank_data <- tq_get(x = "DANSKE.co", get = "stock.prices", from = "0000-01-01", to = "2009-01-01")
+danske <- na.omit(danskebank_data$adjusted)
 
-# test_adf <- adf.test(Bitcoin_data$close %>% na.omit(), k = 0, alternative = "stationary")
 
-plot.ts(Bitcoin_data$close)
+plot.ts(danske)
+plot.ts(tsla)
+
+
+plot.ts(btc)
 
 
 
 GSADF_fun <- function(x, min_window, step_length, window_increase) {
   nrow_x <- length(x)
   window_size <- min_window
-  
+
   result <- tibble()
   k_ind <- 1
-  while(window_size < (nrow_x- step_length)) {
-    max_i <- floor((nrow_x - window_size)/step_length)
+  while (window_size < (nrow_x - step_length)) {
+    max_i <- floor((nrow_x - window_size) / step_length)
     for (i in 0:max_i) {
-    adf_list <- suppressWarnings(adf.test(x = x[(step_length*i):((step_length*i) + window_size)],
-                              alternative = "stationary",
-                              k = 0))
-    result[k_ind, "t_value"] <- adf_list[["statistic"]][["Dickey-Fuller"]]
-    result[k_ind, "start_day"] <- step_length*i
-    result[k_ind, "end_day"] <- ((step_length*i) + window_size)
-    result[k_ind, "interval_length"] <- window_size
-    k_ind <- k_ind + 1
+      adf_list <- suppressWarnings(adf.test(
+        x = x[(step_length * i):((step_length * i) + window_size)],
+        alternative = "stationary",
+        k = 0
+      ))
+      result[k_ind, "t_value"] <- adf_list[["statistic"]][["Dickey-Fuller"]]
+      result[k_ind, "start_day"] <- step_length * i
+      result[k_ind, "end_day"] <- ((step_length * i) + window_size)
+      result[k_ind, "interval_length"] <- window_size
+      k_ind <- k_ind + 1
     }
     window_size <- window_size + window_increase
   }
   result
 }
 
+GSADF_fun_result <- GSADF_fun(x = danske, min_window = 30, step_length = 5, window_increase = 10)
 GSADF_fun_result <- GSADF_fun(x = btc, min_window = 30, step_length = 5, window_increase = 10)
+GSADF_fun_result <- GSADF_fun(x = tsla, min_window = 30, step_length = 5, window_increase = 10)
 
-max(GSADF_fun_result$interval_length)
 
-max_pr_gruppe <- GSADF_fun_result %>% group_by(interval_length) %>%
-  summarise(max_t_group = max(t_value)) %>%
-  select(max_t_group)
-
-p_vals <- tibble()
-for (i in 1:ncol(tibble_distri)-1) {
-  p_vals[i,1] <- sum(max_pr_gruppe[i,1] %>% pull() > tibble_distri[,i+1])/nrow(tibble_distri)
+p_val_fun <- function(t_val, interval_length) {
+  sum(t_val > df_distri_list[,paste("T_val_", interval_length, sep = "")])/nrow(df_distri_list)
 }
 
+p_values <- GSADF_fun_result %>% rowwise() %>% 
+  mutate(p_val = p_val_fun(t_val = t_value, interval_length = interval_length))
 
+plot_data <- p_values %>% filter(p_val == 1)
+plot_danske <- bind_cols(seq_along(danske), danske) %>% `colnames<-`(c("day", "value"))
+plot_tsla <- bind_cols(seq_along(tsla), tsla) %>% `colnames<-`(c("day", "value"))
+plot_btc <- bind_cols(seq_along(btc), btc) %>% `colnames<-`(c("day", "value"))
+
+ggplot(plot_danske, aes(x = day, y = value)) +
+  geom_line() +
+  geom_point(aes(start_day, 20), data = plot_data, color = "blue") +
+  geom_point(aes(end_day, 20), data = plot_data, color = "red")
+
+
+plot_data %>% group_by(interval_length)
+
+p_values %>% group_by(interval_length) %>% summarise(max(p_val)) %>% view
 ```
