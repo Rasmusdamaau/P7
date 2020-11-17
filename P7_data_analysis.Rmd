@@ -206,18 +206,21 @@ ggplot(data = df_mult_lines, aes(x = value, color = variable)) +
 
 ```{r}
 
-amazon_data <- tq_get(x = "btc-usd", get = "stock.prices", complete_cases = T, from = "2012-01-01")
-btc <- na.omit(amazon_data$adjusted)
+p_val_fun <- function(t_val, interval_length, ditribution_tibble) {
+  
+  sum(t_val > ditribution_tibble[,
+                                 paste("T_val_", interval_length, sep = "")]) /
+    nrow(ditribution_tibble)
+}
 
-plot.ts(rev(btc))
-
-GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window,
-                      step_length, window_increase,
+GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 20,
+                      step_length = 5, window_increase = 10,
                       date_from = "1900-01-01", date_to = Sys.Date(),
                       drift = F, trend = F) {
   if (is.null(x)) {
     stock_data <- tq_get(ticker, from = date_from, to = date_to)
     x <- na.omit(stock_data$adjusted)
+    date_x <- stock_data$date
   }
   nrow_x <- length(x)
   window_size <- min_window
@@ -227,6 +230,19 @@ GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window,
     drift == T & trend == F ~ 2,
     drift == T & trend == T ~ 3
   )
+  distri_tibbles <- c("DF_distribution.RData",
+                      "DF_distribution_drift.RData",
+                      "DF_distribution_drift_trend.RData",
+                      "DF_distribution_trend.RData")
+ load(distri_tibbles[t_val_model_nr])
+ ditribution_tibble <- if (t_val_model_nr == 1) {
+  df_distri
+ } else if (t_val_model_nr == 2) {
+   df_distri_drift
+ } else if (t_val_model_nr == 3) {
+   df_distri_drift_trend
+ }
+   
 
   result <- tibble()
   k_ind <- 1
@@ -255,38 +271,50 @@ GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window,
     }
     window_size <- window_size + window_increase
   }
-  result
+  result <- result %>%
+    rowwise() %>%
+    mutate(p_val = p_val_fun(
+      t_val = t_value,
+      interval_length = interval_length,
+      ditribution_tibble = ditribution_tibble
+    ))
+    result_list <- list(stock = tibble(date = date_x,
+                                       price = x),
+                        result = result)
+  return(result_list)
 }
 
+  
+  
 GSADF_fun_result <- GSADF_fun(
   min_window = 30, step_length = 5,
   window_increase = 10, ticker = "btc-usd",
-  date_from = "2000-01-01", date_to = Sys.Date()
+  date_from = "2019-01-01", date_to = Sys.Date(), drift = T, trend = T
 )
-# GSADF_fun_result <- GSADF_fun(x = rev(discount_btc), min_window = 30,
-#                               step_length = 20, window_increase = 20,drift = F,trend = F)
-p_val_fun <- function(t_val, interval_length) {
-  sum(t_val > df_distri_list[, paste("T_val_", interval_length, sep = "")]) / nrow(df_distri_list)
-}
-p_values <- GSADF_fun_result %>%
-  rowwise() %>%
-  mutate(p_val = p_val_fun(t_val = t_value, interval_length = interval_length))
 
-plot_data <- p_values %>% filter(p_val == max(p_values$p_val))
 
-# plot_data <- p_values %>% filter(t_value == max(p_values$t_value))
+plot_data <- GSADF_fun_result$result %>% filter(p_val == max(GSADF_fun_result$result$p_val))
 
-# plot_danske <- bind_cols(seq_along(danske), danske) %>% `colnames<-`(c("day", "value"))
-# plot_tsla <- bind_cols(seq_along(tsla), tsla) %>% `colnames<-`(c("day", "value"))
-plot_btc <- bind_cols(seq_along(rev(discount_btc)), rev(discount_btc)) %>% `colnames<-`(c("day", "value"))
-
-ggplot(plot_btc, aes(x = day, y = value)) +
+ggplot(data = GSADF_fun_result$stock, aes(x = seq_along(date), y = price)) +
   geom_line() +
-  # geom_point(aes(start_day[1], 20), data = plot_data, color = "blue") +
-  # geom_point(aes(end_day[1], 200), data = plot_data, color = "red") +
-  geom_rect(aes(xmin = start_day, xmax = end_day),
-    ymin = -Inf, ymax = Inf, alpha = 0.1, data = plot_data, inherit.aes = F
-  )
+  geom_rect(data = plot_data, aes(xmin = start_day, xmax = end_day),
+            ymin = -Inf, ymax = Inf, alpha = 0.1, inherit.aes = F)
+
+# 
+# 
+# # plot_data <- p_values %>% filter(t_value == max(p_values$t_value))
+# 
+# # plot_danske <- bind_cols(seq_along(danske), danske) %>% `colnames<-`(c("day", "value"))
+# # plot_tsla <- bind_cols(seq_along(tsla), tsla) %>% `colnames<-`(c("day", "value"))
+# plot_btc <- bind_cols(seq_along(rev(discount_btc)), rev(discount_btc)) %>% `colnames<-`(c("day", "value"))
+# 
+# ggplot(plot_data, aes(x = day, y = value)) +
+#   geom_line() +
+#   # geom_point(aes(start_day[1], 20), data = plot_data, color = "blue") +
+#   # geom_point(aes(end_day[1], 200), data = plot_data, color = "red") +
+#   geom_rect(aes(xmin = start_day, xmax = end_day),
+#     ymin = -Inf, ymax = Inf, alpha = 0.1, data = plot_data, inherit.aes = F
+#   )
 ```
 
 
