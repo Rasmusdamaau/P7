@@ -211,21 +211,29 @@ discount <- function(p, r = 0.01) {
 }
 
 
-p_val_fun <- function(t_val, interval_length, ditribution_tibble) {
-  sum(t_val > ditribution_tibble[
-    ,
-    paste("T_val_", interval_length, sep = "")
-  ]) /
-    nrow(ditribution_tibble)
+p_val_fun <- function(t_val, interval_length, distribution_tibble) {
+  if (interval_length %% 10 == 0) {
+    sum(t_val > distribution_tibble[
+      ,
+      paste("T_val_", interval_length, sep = "")
+    ]) /
+      nrow(distribution_tibble)
+  } else
+  if (interval_length %% 10 != 0) {
+    column <- paste("T_val_", plyr::round_any(interval_length, 10), sep = "")
+    sum(t_val > distribution_tibble[, column]) / nrow(distribution_tibble)
+  }
 }
 
-GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 20,
+GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 30,
                       step_length = 5, window_increase = 10,
                       date_from = "1900-01-01", date_to = Sys.Date(),
                       drift = F, trend = F, risk_free_rate = 0.01) {
   if (is.null(x)) {
-    stock_data <- tq_get(ticker, from = date_from, to = date_to)
-    x <- discount(p = na.omit(stock_data$adjusted), r = risk_free_rate)
+    stock_data <- tq_get(ticker, from = date_from, to = date_to) %>%
+      select(date, adjusted) %>%
+      na.omit()
+    x <- discount(p = stock_data$adjusted, r = risk_free_rate)
     date_x <- stock_data$date
   }
   nrow_x <- length(x)
@@ -243,7 +251,7 @@ GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 20,
     "DF_distribution_trend.RData"
   )
   load(distri_tibbles[t_val_model_nr])
-  ditribution_tibble <- if (t_val_model_nr == 1) {
+  distribution_tibble <- if (t_val_model_nr == 1) {
     df_distri
   } else if (t_val_model_nr == 2) {
     df_distri_drift
@@ -284,7 +292,7 @@ GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 20,
     mutate(p_val = p_val_fun(
       t_val = t_value,
       interval_length = interval_length,
-      ditribution_tibble = ditribution_tibble
+      distribution_tibble = distribution_tibble
     ))
   result_list <- list(
     stock = tibble(
@@ -299,9 +307,9 @@ GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 20,
 
 
 GSADF_fun_result <- GSADF_fun(
-  min_window = 30, step_length = 5,
-  window_increase = 10, ticker = "btc-usd",
-  date_from = "2019-01-01", date_to = Sys.Date(), drift = T, trend = T
+  min_window = 30, step_length = 20,
+  window_increase = 5, ticker = "VWS.CO",
+  date_from = "2019-01-01", date_to = Sys.Date(), drift = F, trend = F
 )
 
 
@@ -313,6 +321,7 @@ ggplot(data = GSADF_fun_result$stock, aes(x = seq_along(date), y = price)) +
     data = plot_data, aes(xmin = start_day, xmax = end_day),
     ymin = -Inf, ymax = Inf, alpha = 0.1, inherit.aes = F
   )
+
 
 #
 #
