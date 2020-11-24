@@ -1,18 +1,303 @@
 ---
-title: "P7_Data_BJ"
+title: "P7_Data_analysis"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(language = "en")
+
+library(reshape2)
+library(tidyquant)
+library(tidyverse)
+
+# library(tseries)
+library(forecast)
+
+library(microbenchmark)
+
+library(aTSA)
+# devtools::install_github("itamarcaspi/rtadfr")
+
+# library(rtadfr)
+
+# library(styler)
+
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+# forsøg på selv at generere DF fordeling
 
-```{r cars}
-summary(cars)
+```{r}
+
+
+DF_distri <- function(T_val = 100, seed = 12345,
+                      sd_rv = 1, y_0 = 1, n_monte = 10,
+                      T_vals_only = T, drift = F, trend = f) {
+  set.seed(seed)
+  t_vector <- c()
+  list_t_greater_0 <- list()
+  
+  t_val_model_nr <- case_when(drift == F & trend == F ~ 1,
+                              drift == T & trend == F ~ 2,
+                              drift == F & trend == T ~ 2,
+                              drift == T & trend == T ~ 3)
+  # k <- 1
+
+  for (j in 1:n_monte) {
+    y <- c()
+    y[1] <- y_0
+    y_fin <- c()
+
+    for (i in 2:(T_val + 50)) {
+      eps <- rnorm(1, mean = 0, sd = sd_rv)
+      y[i] <- y[i - 1] + eps
+    }
+    y_fin <- y[(50 + 1):(T_val + 50)]
+    data <- tibble()
+    data <- tibble(
+      t = 1:T_val,
+      y = y_fin
+    )
+    model <- list()
+    if (drift == F & trend == F) {
+      model <- lm(diff(y) ~ lag(y)[2:T_val] + 0, data = data)
+    }
+    if (drift == T & trend == F) {
+      model <- lm(diff(y) ~ na.omit(lag(y)), data = data)
+    }
+    if (drift == F & trend == T) {
+      model <- lm(diff(y) ~ 0 + t[-1] + na.omit(lag(y)), data = data)
+    }
+    if (drift == T & trend == T) {
+      model <- lm(diff(y) ~ t[-1] + na.omit(lag(y)), data = data)
+    }
+
+    # if (coef(model)[2] > 0) {
+    #   list_t_greater_0[[k]] <- list(
+    #     y = data$y,
+    #     model = summary(model),
+    #     t_val = summary(model)$coefficients[2, 3]
+    #   )
+    #   k <- k + 1
+    # }
+    t_vector[j] <- summary(model)$coefficients[t_val_model_nr, 3]
+  }
+  if (T_vals_only == F) {
+    t_95 <- sort(t_vector, decreasing = T)[n_monte * 0.95]
+    t_99 <- sort(t_vector, decreasing = T)[n_monte * 0.99]
+  }
+
+  if (T_vals_only == T) {
+    list_return <- t_vector
+  }
+  if (T_vals_only == F) {
+    list_return <- list(
+      t_vector = t_vector,
+      quantile_95 = t_95,
+      quantile_99 = t_99,
+      list_0 = list_t_greater_0
+    )
+  }
+  return(list_return)
+}
+
+# microbenchmark(DF_distri(T_val = 200, n_monte = 10000), times = 1)
+df_distr_test <- DF_distri(T_val = 50, n_monte = 10000, drift = F, trend = T)
+
+sort(df_distr_test, decreasing = T)[10000 * 0.99]
+
+# summary(lm(dist ~ speed - 1, data = cars))$coefficients
+ggplot(data.frame(y = df_distr_test), aes(y)) +
+  geom_density()
+# df_distr_test$quantile_95
+# df_distr_test$quantile_99
 ```
+
+
+
+# generering af fordelings tibbles
+
+```{r}
+
+index_T <- seq(from = 30, to = 3000, by = 10)
+
+
+df_distri <- tibble(.rows = 10000)
+for (i in 1:length(index_T)) {
+  df_distri[, i] <- DF_distri(T_val = index_T[i], n_monte = 10000, drift = F, trend = F)
+}
+colnames(df_distri) <- paste0(rep("T_val_", length(index_T)), index_T)
+save(df_distri, file = "DF_distribution.RData")
+
+
+df_distri_drift <- tibble(.rows = 10000)
+for (i in 1:length(index_T)) {
+  df_distri_drift[, i] <- DF_distri(T_val = index_T[i], n_monte = 10000, drift = T, trend = F)
+}
+colnames(df_distri_drift) <- paste0(rep("T_val_", length(index_T)), index_T)
+save(df_distri_drift, file = "DF_distribution_drift.RData")
+
+
+df_distri_trend <- tibble(.rows = 10000)
+for (i in 1:length(index_T)) {
+  df_distri_trend[, i] <- DF_distri(T_val = index_T[i], n_monte = 10000, drift = F, trend = T)
+}
+colnames(df_distri_trend) <- paste0(rep("T_val_", length(index_T)), index_T)
+save(df_distri_trend, file = "DF_distribution_trend.RData")
+
+
+df_distri_drift_trend <- tibble(.rows = 10000)
+for (i in 1:length(index_T)) {
+  df_distri_drift_trend[, i] <- DF_distri(T_val = index_T[i], n_monte = 10000, drift = T, trend = T)
+}
+colnames(df_distri_drift_trend) <- paste0(rep("T_val_", length(index_T)), index_T)
+save(df_distri_drift_trend, file = "DF_distribution_drift_trend.RData")
+
+```
+
+
+# plots til projektet
+
+```{r}
+
+df_distri_plots <- tibble(.rows = 100000)
+colnames(df_distri_plots) <- c("T_val_30","T_val_500", "T_val_1500")
+index_T <- c(30, 500, 1500)
+for (i in 1:3) {
+  df_distri_plots[, i] <- DF_distri(T_val = index_T[i], n_monte = 100000)
+}
+
+
+# save(df_distri_plots, file = "DF_distribution_30_500_1500.RData")
+
+
+df_distri_plot_pdf <- ggplot(data = df_distri_plots) +
+  geom_density(aes(T_val_30), color = "blue") +
+  geom_density(aes(T_val_500), color = "red") +
+  geom_density(aes(T_val_1500), color = "black") +
+  labs(x = "t value", title = "Simulation of DF distribution")
+
+
+colnames(df_distri_plots) <- c("T = 30", "T = 500", "T = 1500")
+
+# df_mult_lines <- df_distri_plots %>%
+#   pivot_longer(c("T = 30", "T = 500", "T = 1500"), names_to = "Variable", values_to = "Value")
+
+df_mult_lines <- df_distri_plots %>% melt() # melt laver bred format til lang format med col navne som grupperingsnavne
+
+# pdf(file = "Billeder/DF_distribution_30_500_1500.pdf",height = 4,width = 8)
+ggplot(data = df_mult_lines, aes(x = value, color = variable)) +
+  geom_density(size = 0.9)
+# dev.off()
+
+
+# pdf(file = "Billeder/DF_distribution_30_500_1500.pdf",height = 4,width = 8)
+# df_distri_plot_pdf
+# dev.off()
+```
+
+
+
+# GSADF function with lm call instead
+
+```{r}
+
+amazon_data <- tq_get(x = "btc-usd", get = "stock.prices", complete_cases = T, from = "2012-01-01")
+btc <- na.omit(amazon_data$adjusted)
+
+plot.ts(rev(btc))
+
+GSADF_fun <- function(x, min_window, step_length, window_increase, drift = F, trend = F) {
+  nrow_x <- length(x)
+  window_size <- min_window
+  
+  t_val_model_nr <- case_when(drift == F & trend == F ~ 1,
+                              drift == T & trend == F ~ 2,
+                              drift == T & trend == T ~ 3)
+
+  result <- tibble()
+  k_ind <- 1
+  while (window_size < (nrow_x - step_length)) {
+    max_i <- floor((nrow_x - window_size) / step_length)
+    for (i in 0:max_i) {
+      x_window <- x[(step_length * i):((step_length * i) + window_size)]
+      plot_data <- tibble(t = seq_along(x_window), x_window)
+      if (drift == F & trend == F) {
+        model <- lm(diff(x_window) ~ 0 + na.omit(lag(x_window)), data = plot_data)
+      }
+      if (drift == T & trend == F) {
+        model <- lm(diff(x_window) ~ na.omit(lag(x_window)), data = plot_data)
+      }
+      if (drift == T & trend == T) {
+        model <- lm(diff(x_window) ~ t[-1] + na.omit(lag(x_window)), data = plot_data)
+      }
+      coef_model <- coefficients(summary(model))
+      result[k_ind, "estimate"] <- coef_model[t_val_model_nr,1]
+      result[k_ind, "std_error"] <- coef_model[t_val_model_nr, 2]
+      result[k_ind, "t_value"] <- coef_model[t_val_model_nr, 3]
+      result[k_ind, "start_day"] <- step_length * i
+      result[k_ind, "end_day"] <- ((step_length * i) + window_size)
+      result[k_ind, "interval_length"] <- window_size
+      k_ind <- k_ind + 1
+    }
+    window_size <- window_size + window_increase
+  }
+  result
+}
+
+GSADF_fun_result <- GSADF_fun(x = rev(discount_btc), min_window = 30,
+                              step_length = 20, window_increase = 20,drift = F,trend = F)
+
+p_values <- GSADF_fun_result %>% rowwise() %>% 
+  mutate(p_val = p_val_fun(t_val = t_value, interval_length = interval_length))
+
+plot_data <- p_values %>% filter(p_val == max(p_values$p_val))
+
+# plot_data <- p_values %>% filter(t_value == max(p_values$t_value))
+
+# plot_danske <- bind_cols(seq_along(danske), danske) %>% `colnames<-`(c("day", "value"))
+# plot_tsla <- bind_cols(seq_along(tsla), tsla) %>% `colnames<-`(c("day", "value"))
+plot_btc <- bind_cols(seq_along(rev(discount_btc)), rev(discount_btc)) %>% `colnames<-`(c("day", "value"))
+
+ggplot(plot_btc, aes(x = day, y = value)) +
+  geom_line() +
+  # geom_point(aes(start_day[1], 20), data = plot_data, color = "blue") +
+  # geom_point(aes(end_day[1], 200), data = plot_data, color = "red") +
+  geom_rect(aes(xmin = start_day, xmax = end_day),
+            ymin = -Inf, ymax = Inf, alpha = 0.1, data = plot_data, inherit.aes = F)
+
+
+
+```
+
+
+# forsøg på discounted priser med 1% årlig inflation
+
+
+```{r}
+
+btc
+
+discount <- function(p, t, r = 0.01) {
+  p / (1+r/365)^t
+}
+
+discount_btc <- vapply(btc, discount, FUN.VALUE = type)
+
+sapply(btc, discount, nrow)
+
+discount_btc <- discount(btc, seq_along(btc), r = 0.01)
+
+ggplot(tibble(date = amazon_data$date[-1],
+              btc = btc,
+              discount_btc = discount_btc), aes(x = date)) +
+  geom_line(aes(y = btc), color = "blue") +
+  geom_line(aes(y = discount_btc), color = "red") +
+  scale_x_date(date_labels = "%Y %b %d")
+
+
+```
+
+
