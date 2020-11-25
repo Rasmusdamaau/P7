@@ -372,54 +372,90 @@ ggplot(data = GSADF_fun_result$stock, aes(x = seq_along(date), y = price)) +
 
 ```{r}
 
-u <- GSADF_fun(
-  min_window = 30, step_length = 10,
-  window_increase = 10, ticker = "MAHA-A.ST",
+u_d <- GSADF_fun(
+  min_window = 30, step_length = 1,
+  window_increase = 10, ticker = "BTC-USD",
   date_from = "2020-01-01", date_to = Sys.Date(), drift = F, trend = F
 )
-d <- GSADF_fun(
-  min_window = 30, step_length = 10,
-  window_increase = 10, ticker = "MAHA-A.ST",
+d_d <- GSADF_fun(
+  min_window = 30, step_length = 1,
+  window_increase = 10, ticker = "BTC-USD",
   date_from = "2020-01-01", date_to = Sys.Date(), drift = T, trend = F
 )
-d_t <- GSADF_fun(
-  min_window = 30, step_length = 10,
-  window_increase = 10, ticker = "MAHA-A.ST",
+d_t_d <- GSADF_fun(
+  min_window = 30, step_length = 1,
+  window_increase = 10, ticker = "BTC-USD",
   date_from = "2020-01-01", date_to = Sys.Date(), drift = T, trend = T
 )
 
-combined_count <- function(u, d, d_t, p_restrict) {
+combined_count <- function(u = NULL, d = NULL, d_t = NULL, p_restrict = 0.95) {
   t <- seq_along(u$stock$date)
-  plot_u <- u$result %>% filter(p_val >= p_restrict)
-  plot_d <- d$result %>% filter(p_val >= p_restrict)
-  plot_d_t <- d_t$result %>% filter(p_val >= p_restrict)
+
+  modeltype <- case_when(
+    !is.null(u) & is.null(d) & is.null(d_t) ~ 1,
+    !is.null(u) & !is.null(d) & is.null(d_t) ~ 2,
+    !is.null(u) & !is.null(d) & !is.null(d_t) ~ 3
+  )
+
+  if (!is.null(u)) {
+    plot_u <- u$result %>% filter(p_val >= p_restrict)
+  }
+  if (!is.null(d)) {
+    plot_d <- d$result %>% filter(p_val >= p_restrict)
+  }
+  if (!is.null(d_t)) {
+    plot_d_t <- d_t$result %>% filter(p_val >= p_restrict)
+  }
 
   combined_u <- c()
   combined_d <- c()
   combined_d_t <- c()
-  for (i in seq_along(t)) {
-    combined_u[i] <-
-      sum(i >= plot_u$start_day & i <= plot_u$end_day)
-    combined_d[i] <-
-      sum(i >= plot_d$start_day & i <= plot_d$end_day)
-    combined_d_t[i] <-
-      sum(i >= plot_d_t$start_day & i <= plot_d_t$end_day)
-  }
 
-  combined_df <- data.frame(
-    x = seq_along(combined_u),
-    u = combined_u,
-    d = combined_d,
-    d_t = combined_d_t
-  )
-  return(combined_df %>% pivot_longer(-1))
+  for (i in seq_along(t)) {
+    if (!is.null(u)) {
+      combined_u[i] <-
+        sum(i >= plot_u$start_day & i <= plot_u$end_day)
+    }
+    if (!is.null(d)) {
+      combined_d[i] <-
+        sum(i >= plot_d$start_day & i <= plot_d$end_day)
+    }
+    if (!is.null(d_t)) {
+      combined_d_t[i] <-
+        sum(i >= plot_d_t$start_day & i <= plot_d_t$end_day)
+    }
+  }
+  
+  if (modeltype == 1) {
+    combined_df <- data.frame(x = t, u = combined_u)
+  }
+  if (modeltype == 2) {
+    combined_df <- data.frame(x = t, u = combined_u,
+               d = combined_d)
+  }
+  if (modeltype == 3) {
+    combined_df <- data.frame(x = t, u = combined_u,
+               d = combined_d,
+               d_t = combined_d_t)
+  }
+  return(combined_df %>% pivot_longer(-1) %>% mutate(name = factor(name, levels = c("u", "d", "d_t"))))
 }
 
-plot_data_combined <- combined_count(u, d, d_t, 0.95)
+plot_data_combined <- combined_count(u = u_d, p_restrict = 0.99)
 
 
-ggplot(data = plot_data_combined, aes(x = x, y = value, color = name)) +
-  geom_line(size = 1)
+bubble <- ggplot(data = plot_data_combined, aes(x = x, y = value, color = name)) +
+  geom_line(size = 1) +
+  theme(legend.position = "bottom")
+
+
+# bubble + facet_grid(rows = vars(name))
+
+stock <- ggplot(data = u_d$stock, aes(x = date, y = price)) +
+  geom_line() +
+  scale_x_date(date_labels = "%Y %b", date_breaks = "2 month")
+
+gridExtra::grid.arrange(stock, bubble, nrow = 2)
 
 
 ```
