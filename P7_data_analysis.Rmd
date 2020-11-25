@@ -34,7 +34,7 @@ library(aTSA)
 
 DF_distri <- function(T_val = 100, seed = 12345,
                       sd_rv = 1, y_0 = 1, n_monte = 10,
-                      T_vals_only = T, drift = F, trend = f) {
+                      T_vals_only = T, drift = F, trend = F) {
   set.seed(seed)
   t_vector <- c()
   list_t_greater_0 <- list()
@@ -45,7 +45,6 @@ DF_distri <- function(T_val = 100, seed = 12345,
     drift == F & trend == T ~ 2,
     drift == T & trend == T ~ 3
   )
-  # k <- 1
 
   for (j in 1:n_monte) {
     y <- c()
@@ -57,12 +56,10 @@ DF_distri <- function(T_val = 100, seed = 12345,
       y[i] <- y[i - 1] + eps
     }
     y_fin <- y[(50 + 1):(T_val + 50)]
-    data <- tibble()
     data <- tibble(
       t = 1:T_val,
       y = y_fin
     )
-    model <- list()
     if (drift == F & trend == F) {
       model <- lm(diff(y) ~ lag(y)[2:T_val] + 0, data = data)
     }
@@ -76,14 +73,6 @@ DF_distri <- function(T_val = 100, seed = 12345,
       model <- lm(diff(y) ~ t[-1] + na.omit(lag(y)), data = data)
     }
 
-    # if (coef(model)[2] > 0) {
-    #   list_t_greater_0[[k]] <- list(
-    #     y = data$y,
-    #     model = summary(model),
-    #     t_val = summary(model)$coefficients[2, 3]
-    #   )
-    #   k <- k + 1
-    # }
     t_vector[j] <- summary(model)$coefficients[t_val_model_nr, 3]
   }
   if (T_vals_only == F) {
@@ -163,7 +152,6 @@ save(df_distri_drift_trend, file = "DF_distribution_drift_trend.RData")
 # plots til projektet
 
 ```{r}
-
 df_distri_plots <- tibble(.rows = 100000)
 colnames(df_distri_plots) <- c("T_val_30", "T_val_500", "T_val_1500")
 index_T <- c(30, 500, 1500)
@@ -198,6 +186,32 @@ ggplot(data = df_mult_lines, aes(x = value, color = variable)) +
 # pdf(file = "Billeder/DF_distribution_30_500_1500.pdf",height = 4,width = 8)
 # df_distri_plot_pdf
 # dev.off()
+```
+
+
+# Sammenligning af de drift, drift + trend, ingenting
+
+```{r}
+diff_distri_plot_data <- bind_cols(
+  df_distri %>%
+    select(T_val_1000) %>%
+    rename("no drift or trend" = 1),
+  df_distri_drift %>%
+    select(T_val_1000) %>%
+    rename("drift" = 1),
+  df_distri_drift_trend %>%
+    select(T_val_1000) %>%
+    rename("drift and trend" = 1)
+) %>%
+  pivot_longer(everything())
+
+diff_distri_plot_data$name <- factor(diff_distri_plot_data$name,
+  levels = c("no drift or trend", "drift", "drift and trend")
+)
+
+
+ggplot(data = diff_distri_plot_data, aes(x = value, color = name)) +
+  geom_density(size = 1)
 ```
 
 
@@ -307,13 +321,26 @@ GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 30,
 
 
 GSADF_fun_result <- GSADF_fun(
-  min_window = 30, step_length = 20,
-  window_increase = 5, ticker = "VWS.CO",
-  date_from = "2019-01-01", date_to = Sys.Date(), drift = F, trend = F
+  min_window = 30, step_length = 10,
+  window_increase = 10, ticker = "MAHA-A.ST",
+  date_from = "2020-01-01", date_to = Sys.Date(), drift = F, trend = F
 )
 
 
+
+
+
+GSADF_fun_result$result %>%
+  filter(p_val <= 0.5) %>%
+  View()
+
+
 plot_data <- GSADF_fun_result$result %>% filter(p_val == max(GSADF_fun_result$result$p_val))
+plot_data <- GSADF_fun_result$result %>% filter(p_val >= 0.99)
+plot_data <- GSADF_fun_result$result %>% filter(between(p_val, 0.4, 0.6))
+
+
+
 
 ggplot(data = GSADF_fun_result$stock, aes(x = seq_along(date), y = price)) +
   geom_line() +
@@ -339,6 +366,65 @@ ggplot(data = GSADF_fun_result$stock, aes(x = seq_along(date), y = price)) +
 #     ymin = -Inf, ymax = Inf, alpha = 0.1, data = plot_data, inherit.aes = F
 #   )
 ```
+
+
+# tjek overlap mellem de 3 tests
+
+```{r}
+
+u <- GSADF_fun(
+  min_window = 30, step_length = 10,
+  window_increase = 10, ticker = "MAHA-A.ST",
+  date_from = "2020-01-01", date_to = Sys.Date(), drift = F, trend = F
+)
+d <- GSADF_fun(
+  min_window = 30, step_length = 10,
+  window_increase = 10, ticker = "MAHA-A.ST",
+  date_from = "2020-01-01", date_to = Sys.Date(), drift = T, trend = F
+)
+d_t <- GSADF_fun(
+  min_window = 30, step_length = 10,
+  window_increase = 10, ticker = "MAHA-A.ST",
+  date_from = "2020-01-01", date_to = Sys.Date(), drift = T, trend = T
+)
+
+combined_count <- function(u, d, d_t, p_restrict) {
+  t <- seq_along(u$stock$date)
+  plot_u <- u$result %>% filter(p_val >= p_restrict)
+  plot_d <- d$result %>% filter(p_val >= p_restrict)
+  plot_d_t <- d_t$result %>% filter(p_val >= p_restrict)
+
+  combined_u <- c()
+  combined_d <- c()
+  combined_d_t <- c()
+  for (i in seq_along(t)) {
+    combined_u[i] <-
+      sum(i >= plot_u$start_day & i <= plot_u$end_day)
+    combined_d[i] <-
+      sum(i >= plot_d$start_day & i <= plot_d$end_day)
+    combined_d_t[i] <-
+      sum(i >= plot_d_t$start_day & i <= plot_d_t$end_day)
+  }
+
+  combined_df <- data.frame(
+    x = seq_along(combined_u),
+    u = combined_u,
+    d = combined_d,
+    d_t = combined_d_t
+  )
+  return(combined_df %>% pivot_longer(-1))
+}
+
+plot_data_combined <- combined_count(u, d, d_t, 0.95)
+
+
+ggplot(data = plot_data_combined, aes(x = x, y = value, color = name)) +
+  geom_line(size = 1)
+
+
+```
+
+
 
 
 # forsøg på discounted priser med 1% årlig inflation
