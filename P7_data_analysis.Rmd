@@ -23,6 +23,9 @@ library(aTSA)
 # library(rtadfr)
 
 # library(styler)
+
+library(gridExtra)
+library(lubridate)
 ```
 
 
@@ -390,6 +393,7 @@ d_t_d <- GSADF_fun(
 
 combined_count <- function(u = NULL, d = NULL, d_t = NULL, p_restrict = 0.95) {
   t <- seq_along(u$stock$date)
+  date <- u$stock$date
 
   modeltype <- case_when(
     !is.null(u) & is.null(d) & is.null(d_t) ~ 1,
@@ -427,14 +431,14 @@ combined_count <- function(u = NULL, d = NULL, d_t = NULL, p_restrict = 0.95) {
   }
   
   if (modeltype == 1) {
-    combined_df <- data.frame(x = t, u = combined_u)
+    combined_df <- data.frame(x = date, u = combined_u)
   }
   if (modeltype == 2) {
-    combined_df <- data.frame(x = t, u = combined_u,
+    combined_df <- data.frame(x = date, u = combined_u,
                d = combined_d)
   }
   if (modeltype == 3) {
-    combined_df <- data.frame(x = t, u = combined_u,
+    combined_df <- data.frame(x = date, u = combined_u,
                d = combined_d,
                d_t = combined_d_t)
   }
@@ -446,6 +450,7 @@ plot_data_combined <- combined_count(u = u_d, p_restrict = 0.99)
 
 bubble <- ggplot(data = plot_data_combined, aes(x = x, y = value, color = name)) +
   geom_line(size = 1) +
+  scale_x_date(date_labels = "%Y %b", date_breaks = "2 month") +
   theme(legend.position = "bottom")
 
 
@@ -455,7 +460,7 @@ stock <- ggplot(data = u_d$stock, aes(x = date, y = price)) +
   geom_line() +
   scale_x_date(date_labels = "%Y %b", date_breaks = "2 month")
 
-gridExtra::grid.arrange(stock, bubble, nrow = 2)
+grid.arrange(stock, bubble, nrow = 2)
 
 
 ```
