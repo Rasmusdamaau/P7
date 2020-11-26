@@ -34,68 +34,8 @@ library(lubridate)
 
 ```{r}
 
+source("DF_distribution.R") # DF_distri
 
-DF_distri <- function(T_val = 100, seed = 12345,
-                      sd_rv = 1, y_0 = 1, n_monte = 10,
-                      T_vals_only = T, drift = F, trend = F) {
-  set.seed(seed)
-  t_vector <- c()
-  list_t_greater_0 <- list()
-
-  t_val_model_nr <- case_when(
-    drift == F & trend == F ~ 1,
-    drift == T & trend == F ~ 2,
-    drift == F & trend == T ~ 2,
-    drift == T & trend == T ~ 3
-  )
-
-  for (j in 1:n_monte) {
-    y <- c()
-    y[1] <- y_0
-    y_fin <- c()
-
-    for (i in 2:(T_val + 50)) {
-      eps <- rnorm(1, mean = 0, sd = sd_rv)
-      y[i] <- y[i - 1] + eps
-    }
-    y_fin <- y[(50 + 1):(T_val + 50)]
-    data <- tibble(
-      t = 1:T_val,
-      y = y_fin
-    )
-    if (drift == F & trend == F) {
-      model <- lm(diff(y) ~ lag(y)[2:T_val] + 0, data = data)
-    }
-    if (drift == T & trend == F) {
-      model <- lm(diff(y) ~ na.omit(lag(y)), data = data)
-    }
-    if (drift == F & trend == T) {
-      model <- lm(diff(y) ~ 0 + t[-1] + na.omit(lag(y)), data = data)
-    }
-    if (drift == T & trend == T) {
-      model <- lm(diff(y) ~ t[-1] + na.omit(lag(y)), data = data)
-    }
-
-    t_vector[j] <- summary(model)$coefficients[t_val_model_nr, 3]
-  }
-  if (T_vals_only == F) {
-    t_95 <- sort(t_vector, decreasing = T)[n_monte * 0.95]
-    t_99 <- sort(t_vector, decreasing = T)[n_monte * 0.99]
-  }
-
-  if (T_vals_only == T) {
-    list_return <- t_vector
-  }
-  if (T_vals_only == F) {
-    list_return <- list(
-      t_vector = t_vector,
-      quantile_95 = t_95,
-      quantile_99 = t_99,
-      list_0 = list_t_greater_0
-    )
-  }
-  return(list_return)
-}
 
 # microbenchmark(DF_distri(T_val = 200, n_monte = 10000), times = 1)
 df_distr_test <- DF_distri(T_val = 50, n_monte = 10000, drift = F, trend = T)
@@ -223,107 +163,13 @@ ggplot(data = diff_distri_plot_data, aes(x = value, color = name)) +
 
 ```{r}
 
-discount <- function(p, r = 0.01) {
-  p / (1 + r / 365)^(seq_along(p))
-}
+source("discount.R")
 
+source("p_val_fun.R")
 
-p_val_fun <- function(t_val, interval_length, distribution_tibble) {
-  if (interval_length %% 10 == 0) {
-    sum(t_val > distribution_tibble[
-      ,
-      paste("T_val_", interval_length, sep = "")
-    ]) /
-      nrow(distribution_tibble)
-  } else
-  if (interval_length %% 10 != 0) {
-    column <- paste("T_val_", plyr::round_any(interval_length, 10), sep = "")
-    sum(t_val > distribution_tibble[, column]) / nrow(distribution_tibble)
-  }
-}
+source("GSADF.R")
 
-GSADF_fun <- function(ticker = "btc-usd", x = NULL, min_window = 30,
-                      step_length = 5, window_increase = 10,
-                      date_from = "1900-01-01", date_to = Sys.Date(),
-                      drift = F, trend = F, risk_free_rate = 0.01) {
-  if (is.null(x)) {
-    stock_data <- tq_get(ticker, from = date_from, to = date_to) %>%
-      select(date, adjusted) %>%
-      na.omit()
-    x <- discount(p = stock_data$adjusted, r = risk_free_rate)
-    date_x <- stock_data$date
-  }
-  nrow_x <- length(x)
-  window_size <- min_window
-
-  t_val_model_nr <- case_when(
-    drift == F & trend == F ~ 1,
-    drift == T & trend == F ~ 2,
-    drift == T & trend == T ~ 3
-  )
-  distri_tibbles <- c(
-    "DF_distribution.RData",
-    "DF_distribution_drift.RData",
-    "DF_distribution_drift_trend.RData",
-    "DF_distribution_trend.RData"
-  )
-  load(distri_tibbles[t_val_model_nr])
-  distribution_tibble <- if (t_val_model_nr == 1) {
-    df_distri
-  } else if (t_val_model_nr == 2) {
-    df_distri_drift
-  } else if (t_val_model_nr == 3) {
-    df_distri_drift_trend
-  }
-
-
-  result <- tibble()
-  k_ind <- 1
-  while (window_size < (nrow_x - step_length)) {
-    max_i <- floor((nrow_x - window_size) / step_length)
-    for (i in 0:max_i) {
-      x_window <- x[(step_length * i):((step_length * i) + window_size)]
-      plot_data <- tibble(t = seq_along(x_window), x_window)
-      if (drift == F & trend == F) {
-        model <- lm(diff(x_window) ~ 0 + na.omit(lag(x_window)), data = plot_data)
-      }
-      if (drift == T & trend == F) {
-        model <- lm(diff(x_window) ~ na.omit(lag(x_window)), data = plot_data)
-      }
-      if (drift == T & trend == T) {
-        model <- lm(diff(x_window) ~ t[-1] + na.omit(lag(x_window)), data = plot_data)
-      }
-      coef_model <- coefficients(summary(model))
-      result[k_ind, "estimate"] <- coef_model[t_val_model_nr, 1]
-      result[k_ind, "std_error"] <- coef_model[t_val_model_nr, 2]
-      result[k_ind, "t_value"] <- coef_model[t_val_model_nr, 3]
-      result[k_ind, "start_day"] <- step_length * i
-      result[k_ind, "end_day"] <- ((step_length * i) + window_size)
-      result[k_ind, "interval_length"] <- window_size
-      k_ind <- k_ind + 1
-    }
-    window_size <- window_size + window_increase
-  }
-  result <- result %>%
-    rowwise() %>%
-    mutate(p_val = p_val_fun(
-      t_val = t_value,
-      interval_length = interval_length,
-      distribution_tibble = distribution_tibble
-    ))
-  result_list <- list(
-    stock = tibble(
-      date = date_x,
-      price = x
-    ),
-    result = result
-  )
-  return(result_list)
-}
-
-
-
-GSADF_fun_result <- GSADF_fun(
+GSADF_fun_result <- GSADF(
   min_window = 30, step_length = 10,
   window_increase = 10, ticker = "MAHA-A.ST",
   date_from = "2020-01-01", date_to = Sys.Date(), drift = F, trend = F
@@ -375,77 +221,26 @@ ggplot(data = GSADF_fun_result$stock, aes(x = seq_along(date), y = price)) +
 
 ```{r}
 
-u_d <- GSADF_fun(
+u_d <- GSADF(
   min_window = 30, step_length = 1,
-  window_increase = 10, ticker = "BTC-USD",
+  window_increase = 1, ticker = "BTC-USD",
   date_from = "2020-01-01", date_to = Sys.Date(), drift = F, trend = F
 )
-d_d <- GSADF_fun(
+d_d <- GSADF(
   min_window = 30, step_length = 1,
-  window_increase = 10, ticker = "BTC-USD",
+  window_increase = 1, ticker = "BTC-USD",
   date_from = "2020-01-01", date_to = Sys.Date(), drift = T, trend = F
 )
-d_t_d <- GSADF_fun(
+d_t_d <- GSADF(
   min_window = 30, step_length = 1,
-  window_increase = 10, ticker = "BTC-USD",
+  window_increase = 1, ticker = "BTC-USD",
   date_from = "2020-01-01", date_to = Sys.Date(), drift = T, trend = T
 )
 
-combined_count <- function(u = NULL, d = NULL, d_t = NULL, p_restrict = 0.95) {
-  t <- seq_along(u$stock$date)
-  date <- u$stock$date
 
-  modeltype <- case_when(
-    !is.null(u) & is.null(d) & is.null(d_t) ~ 1,
-    !is.null(u) & !is.null(d) & is.null(d_t) ~ 2,
-    !is.null(u) & !is.null(d) & !is.null(d_t) ~ 3
-  )
+source("combined_count.R")
 
-  if (!is.null(u)) {
-    plot_u <- u$result %>% filter(p_val >= p_restrict)
-  }
-  if (!is.null(d)) {
-    plot_d <- d$result %>% filter(p_val >= p_restrict)
-  }
-  if (!is.null(d_t)) {
-    plot_d_t <- d_t$result %>% filter(p_val >= p_restrict)
-  }
-
-  combined_u <- c()
-  combined_d <- c()
-  combined_d_t <- c()
-
-  for (i in seq_along(t)) {
-    if (!is.null(u)) {
-      combined_u[i] <-
-        sum(i >= plot_u$start_day & i <= plot_u$end_day)
-    }
-    if (!is.null(d)) {
-      combined_d[i] <-
-        sum(i >= plot_d$start_day & i <= plot_d$end_day)
-    }
-    if (!is.null(d_t)) {
-      combined_d_t[i] <-
-        sum(i >= plot_d_t$start_day & i <= plot_d_t$end_day)
-    }
-  }
-  
-  if (modeltype == 1) {
-    combined_df <- data.frame(x = date, u = combined_u)
-  }
-  if (modeltype == 2) {
-    combined_df <- data.frame(x = date, u = combined_u,
-               d = combined_d)
-  }
-  if (modeltype == 3) {
-    combined_df <- data.frame(x = date, u = combined_u,
-               d = combined_d,
-               d_t = combined_d_t)
-  }
-  return(combined_df %>% pivot_longer(-1) %>% mutate(name = factor(name, levels = c("u", "d", "d_t"))))
-}
-
-plot_data_combined <- combined_count(u = u_d, p_restrict = 0.99)
+plot_data_combined <- combined_count(u = u_d, d = d_d, d_t = d_t_d, p_restrict = 0.99)
 
 
 bubble <- ggplot(data = plot_data_combined, aes(x = x, y = value, color = name)) +
@@ -474,10 +269,6 @@ grid.arrange(stock, bubble, nrow = 2)
 ```{r}
 
 btc
-
-discount <- function(p, t, r = 0.01) {
-  p / (1 + r / 365)^t
-}
 
 discount_btc <- vapply(btc, discount, FUN.VALUE = type, ...)
 
