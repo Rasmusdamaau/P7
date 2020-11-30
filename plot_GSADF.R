@@ -1,5 +1,5 @@
 plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq_get = "2020-01-01",
-                       image_name = NULL, valuta = "USD") {
+                       image_name = NULL, valuta = "valuta", aktie = "aktie") {
   
   model_nr <- case_when(is.null(d_t) & is.null(d) ~ 1,
                         is.null(d_t) ~ 2,
@@ -23,7 +23,8 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
     ) +
     scale_x_date(date_labels = "%Y %b", date_breaks = "2 month") +
     xlab("") +
-    ylab(paste("Price in", valuta))
+    ylab(paste("Price in", valuta)) +
+    labs(title = aktie)
   
   
   

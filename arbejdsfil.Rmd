@@ -1,0 +1,47 @@
+---
+title: "Arbejdsfil"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+Sys.setenv(language = "en")
+Sys.setlocale("LC_ALL", "English")
+
+library(reshape2)
+library(tidyquant)
+library(tidyverse)
+
+library(forecast)
+
+library(microbenchmark)
+
+library(aTSA)
+
+library(gridExtra)
+library(lubridate)
+```
+
+# funktioner
+
+```{r}
+source("DF_distribution.R") # simulate Dickey Fuller distribution
+
+source("discount.R") # discount prices
+
+source("p_val_fun.R") # calculate p values
+
+source("GSADF.R") # Implementation of GSADF
+
+source("combined_count.R") # count number of intervals the days are in
+
+source("plot_GSADF.R") # plot the result
+
+
+
+```
+
+
+
+
