@@ -1,4 +1,4 @@
-GSADF <- function(ticker = "btc-usd", x = NULL, min_window = 30,
+GSADF <- function(ticker, x = NULL, min_window = 30,
                   step_length = 5, window_increase = 10,
                   date_from = "1900-01-01", date_to = Sys.Date(),
                   drift = F, trend = F, risk_free_rate = 0.01) {

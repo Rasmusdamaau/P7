@@ -256,6 +256,14 @@ stock <- ggplot(data = u_d$stock, aes(x = date, y = price)) +
   scale_x_date(date_labels = "%Y %b", date_breaks = "2 month")
 
 grid.arrange(stock, bubble, nrow = 2)
+```
+
+
+# Backward GSADF
+
+```{r}
+
+
 
 
 ```
