@@ -1,6 +1,8 @@
 ---
 title: "P7_Data_analysis"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -240,45 +242,54 @@ d_t_d <- GSADF(
 
 source("combined_count.R")
 
-plot_data_combined <- combined_count(u = u_d,d_t = NULL, d = NULL, p_restrict = 0.95)
-plot_data_rect <- u_d$result %>% filter(p_val == max(u_d$result$p_val)) %>% 
-  mutate(date_start = ymd("2020-01-01") + start_day,
-         date_end = ymd("2020-01-01") + end_day)
+source("plot_GSADF.R")
+
+plot_GSADF(u = u_d)
 
 
 
-stock <- ggplot(data = u_d$stock, aes(x = date, y = price)) +
-  geom_line() +
-  geom_rect(
-    data = plot_data_rect, aes(xmin = date_start, xmax = date_end),
-    ymin = -Inf, ymax = Inf, alpha = 0.1, inherit.aes = F
-  ) +
-  scale_x_date(date_labels = "%Y %b", date_breaks = "2 month")
 
 
 
-bubble <- ggplot(data = plot_data_combined, aes(x = x, y = value, color = name)) +
-  geom_line(size = 1) +
-  scale_x_date(date_labels = "%Y %b", date_breaks = "2 month") +
-  theme(legend.position = "bottom")
-
-
-# bubble + facet_grid(rows = vars(name))
-
+# plot_data_combined <- combined_count(u = u_d, d_t = NULL, d = NULL, p_restrict = 0.95)
+# plot_data_rect <- u_d$result %>%
+#   filter(p_val == max(u_d$result$p_val)) %>%
+#   mutate(
+#     date_start = ymd("2020-01-01") + start_day,
+#     date_end = ymd("2020-01-01") + end_day
+#   )
+# 
+# 
+# 
 # stock <- ggplot(data = u_d$stock, aes(x = date, y = price)) +
 #   geom_line() +
+#   geom_rect(
+#     data = plot_data_rect, aes(xmin = date_start, xmax = date_end),
+#     ymin = -Inf, ymax = Inf, alpha = 0.1, inherit.aes = F
+#   ) +
 #   scale_x_date(date_labels = "%Y %b", date_breaks = "2 month")
-
-grid.arrange(stock, bubble, nrow = 2)
+# 
+# 
+# 
+# bubble <- ggplot(data = plot_data_combined, aes(x = x, y = value, color = name)) +
+#   geom_line(size = 1) +
+#   scale_x_date(date_labels = "%Y %b", date_breaks = "2 month") +
+#   theme(legend.position = "bottom")
+# 
+# 
+# # bubble + facet_grid(rows = vars(name))
+# 
+# # stock <- ggplot(data = u_d$stock, aes(x = date, y = price)) +
+# #   geom_line() +
+# #   scale_x_date(date_labels = "%Y %b", date_breaks = "2 month")
+# 
+# grid.arrange(stock, bubble, nrow = 2)
 ```
 
 
 # Backward GSADF
 
 ```{r}
-
-
-
 
 ```
 
