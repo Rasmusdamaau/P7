@@ -28,13 +28,13 @@ library(lubridate)
 ```{r}
 source("DF_distribution.R") # simulate Dickey Fuller distribution
 
-source("discount.R") # discount prices
+source("discount.R") # discount prices, bruges i GSADF
 
-source("p_val_fun.R") # calculate p values
+source("p_val_fun.R") # calculate p values, bruges i GSADF
 
 source("GSADF.R") # Implementation of GSADF
 
-source("combined_count.R") # count number of intervals the days are in
+source("combined_count.R") # count number of intervals the days are in, bruges i plot_GSADF
 
 source("plot_GSADF.R") # plot the result
 
