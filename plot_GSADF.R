@@ -41,7 +41,7 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
   }
   
   if (!is.null(image_name)) {
-    file_name <- paste("Billeder/", image_name, ".pdf", sep = "")
+    file_name <- paste(image_name, ".pdf", sep = "")
     pdf(file = file_name, height = 4,width = 8)
     grid.arrange(stock, bubble, nrow = 2)
     dev.off()

@@ -60,6 +60,7 @@ gsadf_u <- GSADF(ticker = Ticker_code,
                  trend = F,
                  risk_free_rate = 0.01)
 
+
 plot_GSADF(u = gsadf_u,
            d = NULL,
            d_t = NULL, 
