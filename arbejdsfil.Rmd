@@ -21,6 +21,8 @@ library(aTSA)
 
 library(gridExtra)
 library(lubridate)
+# devtools::install_github("rasmusdamaau/gsadf.aau")
+# library(GSADF.AAU)
 ```
 
 # funktioner
@@ -37,7 +39,6 @@ source("GSADF.R") # Implementation of GSADF
 source("combined_count.R") # count number of intervals the days are in, bruges i plot_GSADF
 
 source("plot_GSADF.R") # plot the result
-
 
 
 ```
@@ -73,6 +74,4 @@ plot_GSADF(u = gsadf_u,
 
 
 ```
-
-
 
