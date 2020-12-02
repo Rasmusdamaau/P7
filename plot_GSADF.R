@@ -16,7 +16,7 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
   
   
   stock <- ggplot(data = u$stock, aes(x = date, y = price)) +
-    geom_line() +
+    geom_line(size = 1) +
     geom_rect(
       data = plot_data_rect, aes(xmin = date_start, xmax = date_end),
       ymin = -Inf, ymax = Inf, alpha = 0.1, inherit.aes = F
@@ -45,9 +45,10 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
   if (!is.null(image_name)) {
     file_name <- paste(image_name, ".pdf", sep = "")
     pdf(file = file_name, height = 4,width = 8)
-    grid.arrange(stock, bubble, nrow = 2)
+    grid.arrange(stock, bubble, nrow = 2, heights = c(2,1))
     dev.off()
     cat("image found in ", file_name)
   } else {
-  grid.arrange(stock, bubble, nrow = 2) }
+    grid.arrange(stock, bubble, nrow = 2, heights = c(2,1))
+    }
 }
