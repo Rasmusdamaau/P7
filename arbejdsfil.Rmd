@@ -21,7 +21,7 @@ library(aTSA)
 
 library(gridExtra)
 library(lubridate)
-# devtools::install_github("rasmusdamaau/gsadf.aau")
+# devtools::install_github("rasmusdamaau/GSADF.AAU")
 # library(GSADF.AAU)
 ```
 
@@ -40,6 +40,7 @@ source("combined_count.R") # count number of intervals the days are in, bruges i
 
 source("plot_GSADF.R") # plot the result
 
+source("Tabel_GSADF.R")
 
 ```
 
@@ -60,7 +61,8 @@ gsadf_u <- GSADF(ticker = Ticker_code,
                  date_to = date_to,
                  drift = F,
                  trend = F,
-                 risk_free_rate = 0.01)
+                 risk_free_rate = 0.01,
+                 x = NULL)
 
 plot_GSADF(u = gsadf_u,
            d = NULL,
@@ -71,16 +73,29 @@ plot_GSADF(u = gsadf_u,
            valuta = valuta_for_aktie,
            aktie = Aktie_navn)
 
+
 plot_GSADF(u = gsadf_u,
            d = NULL,
-           d_t = NULL, 
-           p_restrict = 0.95, 
+           d_t = NULL,
+           p_restrict = 0.95,
            start_date_tq_get = date_from,
-           image_name = "btc_2", 
+           image_name = "btc_test",
            valuta = valuta_for_aktie,
            aktie = Aktie_navn)
 
 
 
 ```
+
+```{r}
+
+
+# prøv at restringere til sidste dato og se om der er nogle aktive bobler
+
+GSADF.AAU::GSADF()
+GSADF.AAU::plot_GSADF()
+GSADF.AAU::Tabel_GSADF()
+
+```
+
 
