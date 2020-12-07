@@ -42,6 +42,9 @@ source("plot_GSADF.R") # plot the result
 
 source("Tabel_GSADF.R")
 
+load("D:/OneDrive - Aalborg Universitet/0P7/P7_R/DF_distribution.RData")
+load("D:/OneDrive - Aalborg Universitet/0P7/P7_R/DF_distribution_drift.RData")
+load("D:/OneDrive - Aalborg Universitet/0P7/P7_R/DF_distribution_drift_trend.RData")
 ```
 
 BTC 2020
@@ -50,8 +53,8 @@ BTC 2020
 Ticker_code <- "btc-usd"
 Aktie_navn <- "Bitcoin"
 valuta_for_aktie <- "USD"
-date_from <- "2017-01-01"
-date_to <- "2019-01-01"
+date_from <- "2020-01-01"
+date_to <- "2020-12-01"
 
 gsadf_u <- GSADF(ticker = Ticker_code,
                  min_window = 60,
@@ -62,7 +65,8 @@ gsadf_u <- GSADF(ticker = Ticker_code,
                  drift = F,
                  trend = F,
                  risk_free_rate = 0.01,
-                 x = NULL)
+                 x = NULL, 
+                 own_df_distribution = NULL)
 
 plot_GSADF(u = gsadf_u,
            d = NULL,
@@ -79,7 +83,7 @@ plot_GSADF(u = gsadf_u,
            d_t = NULL,
            p_restrict = 0.95,
            start_date_tq_get = date_from,
-           image_name = "btc_test",
+           image_name = paste(Ticker_code, date_from, sep = ""),
            valuta = valuta_for_aktie,
            aktie = Aktie_navn)
 
@@ -87,14 +91,47 @@ plot_GSADF(u = gsadf_u,
 
 ```
 
+
+```{r}
+
+tabel_data <- Tabel_GSADF(gsadf = gsadf_u)
+
+Output_tabel <- data.frame("Count" = tabel_data$count,
+                       "p value" = tabel_data$value,
+                       "Longest interval" = paste(tabel_data$interval_longest[1], "to",
+                                                  tabel_data$interval_longest[2], sep = " "),
+                       "Price change over longest interval" = tabel_data$price_change_longest,
+                       "Mean start day" = tabel_data$mean_startday,
+                       "Mean end day" = tabel_data$mean_endday)
+
+
+w <- Hmisc::latex(Output_tabel %>% base::t(),
+                  file = paste(Ticker_code,"2020.tex", sep = ""),
+                  digits = 3)
+
+```
+
+
+```{r}
+
+tibble(gsadf_u$result) %>% filter(p_val == max(p_val))
+
+gsadf_u$stock %>% View()
+
+```
+
+
+
+
+
 ```{r}
 
 
 # prøv at restringere til sidste dato og se om der er nogle aktive bobler
 
-GSADF.AAU::GSADF()
-GSADF.AAU::plot_GSADF()
-GSADF.AAU::Tabel_GSADF()
+# GSADF.AAU::GSADF()
+# GSADF.AAU::plot_GSADF()
+# GSADF.AAU::Tabel_GSADF()
 
 ```
 

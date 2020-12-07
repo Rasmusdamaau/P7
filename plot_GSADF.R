@@ -2,6 +2,15 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
                        image_name = NULL, valuta = "valuta", aktie = "aktie") {
   model_nr <- dplyr::case_when(is.null(d_t) & is.null(d) ~
   1, is.null(d_t) ~ 2, !is.null(d_t) ~ 3)
+  
+  gsadf_result <- if (model_nr == 1) {
+    u
+  } else if (model_nr == 2) {
+    d
+  } else if (mode_nr == 3) {
+    d_t
+  }
+  stock_data <- gsadf_result$stock
   plot_data_combined <- combined_count(
     u = u, d_t = d_t, d = d,
     p_restrict = p_restrict
@@ -10,9 +19,8 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
     dplyr::filter(p_val ==
       max(p_val)) %>%
     dplyr::filter(interval_length == max(interval_length)) %>%
-    dplyr::mutate(date_start = lubridate::ymd(start_date_tq_get) +
-      start_day, date_end = lubridate::ymd(start_date_tq_get) +
-      end_day)
+    dplyr::mutate(date_start = stock_data$date[start_day],
+                  date_end = stock_data$date[end_day])
   stock <- ggplot2::ggplot(data = u$stock, ggplot2::aes(
     x = date,
     y = price
@@ -54,7 +62,7 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
   }
   if (!is.null(image_name)) {
     file_name <- paste(image_name, ".pdf", sep = "")
-    grDevices::pdf(file = file_name, height = 4, width = 8)
+    grDevices::pdf(file = file_name, height = 6, width = 8)
     gridExtra::grid.arrange(stock, bubble, nrow = 2, heights = c(
       3,
       2
