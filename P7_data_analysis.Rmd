@@ -241,6 +241,7 @@ GSADF_fun <- function(x, min_window, step_length) {
   # max_i <- floor(n_row_x/step_length) - min_window
   max_i <- floor((n_row_x - min_window) / step_length)
   
+  
   adf_list <- list()
   result <- tibble()
   k_ind <- 1
