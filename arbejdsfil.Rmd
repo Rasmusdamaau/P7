@@ -46,9 +46,9 @@ source("plot_GSADF.R") # plot the result
 BTC 2020
 
 ```{r}
-Ticker_code <- "btc-usd"
-Aktie_navn <- "Bitcoin"
-valuta_for_aktie <- "USD"
+Ticker_code <- "^NDX"
+Aktie_navn <- "Nasdaq 100 Index"
+valuta_for_aktie <- "Points"
 date_from <- "2020-01-01"
 
 gsadf_u <- GSADF(ticker = Ticker_code,
@@ -67,7 +67,7 @@ plot_GSADF(u = gsadf_u,
            d_t = NULL, 
            p_restrict = 0.95, 
            start_date_tq_get = date_from,
-           image_name = NULL, 
+           image_name = "Nasdaq100-data", 
            valuta = valuta_for_aktie,
            aktie = Aktie_navn)
 
