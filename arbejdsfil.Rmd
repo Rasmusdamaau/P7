@@ -47,11 +47,24 @@ load("D:/OneDrive - Aalborg Universitet/0P7/P7_R/DF_distribution_drift.RData")
 load("D:/OneDrive - Aalborg Universitet/0P7/P7_R/DF_distribution_drift_trend.RData")
 ```
 
+```{r}
+
+
+
+```
+
+
 BTC 2020
 
 ```{r}
 Ticker_code <- "btc-usd"
+Ticker_code <- "^NDX"
+Ticker_code <- "ATVI"
+Ticker_code <- "AIR.PA"
 Aktie_navn <- "Bitcoin"
+Aktie_navn <- "NASDAQ100"
+Aktie_navn <- "Activision Blizzard"
+Aktie_navn <- "Airbus"
 valuta_for_aktie <- "USD"
 date_from <- "2020-01-01"
 date_to <- "2020-12-01"
@@ -68,8 +81,43 @@ gsadf_u <- GSADF(ticker = Ticker_code,
                  x = NULL, 
                  own_df_distribution = NULL)
 
+gsadf_d <- GSADF(ticker = Ticker_code,
+                 min_window = 60,
+                 step_length = 1,
+                 window_increase = 1,
+                 date_from = date_from,
+                 date_to = date_to,
+                 drift = T,
+                 trend = F,
+                 risk_free_rate = 0.01,
+                 x = NULL, 
+                 own_df_distribution = NULL)
+
+gsadf_d_t <- GSADF(ticker = Ticker_code,
+                 min_window = 60,
+                 step_length = 1,
+                 window_increase = 1,
+                 date_from = date_from,
+                 date_to = date_to,
+                 drift = T,
+                 trend = T,
+                 risk_free_rate = 0.01,
+                 x = NULL, 
+                 own_df_distribution = NULL)
+
+
+
 plot_GSADF(u = gsadf_u,
            d = NULL,
+           d_t = NULL, 
+           p_restrict = 0.95, 
+           start_date_tq_get = date_from,
+           image_name = NULL, 
+           valuta = "points",
+           aktie = "Airbus")
+
+plot_GSADF(u = NULL,
+           d = gsadf_d,
            d_t = NULL, 
            p_restrict = 0.95, 
            start_date_tq_get = date_from,
@@ -84,9 +132,26 @@ plot_GSADF(u = gsadf_u,
            p_restrict = 0.95,
            start_date_tq_get = date_from,
            image_name = paste(Ticker_code, date_from, sep = ""),
-           valuta = valuta_for_aktie,
+           valuta = "points",
            aktie = Aktie_navn)
 
+plot_GSADF(u = NULL,
+           d = gsadf_d,
+           d_t = NULL,
+           p_restrict = 0.95,
+           start_date_tq_get = date_from,
+           image_name = paste(Ticker_code, date_from, "d", sep = ""),
+           valuta = "points",
+           aktie = Aktie_navn)
+
+plot_GSADF(u = NULL,
+           d = NULL,
+           d_t = gsadf_d_t,
+           p_restrict = 0.95,
+           start_date_tq_get = date_from,
+           image_name = paste(Ticker_code, date_from, "d_t", sep = ""),
+           valuta = valuta_for_aktie,
+           aktie = Aktie_navn)
 
 
 ```
@@ -95,20 +160,48 @@ plot_GSADF(u = gsadf_u,
 ```{r}
 
 tabel_data <- Tabel_GSADF(gsadf = gsadf_u)
+tabel_data <- Tabel_GSADF(gsadf = gsadf_d)
 
 Output_tabel <- data.frame("Count" = tabel_data$count,
-                       "p value" = tabel_data$value,
+                       "$p$-value" = tabel_data$value,
                        "Longest interval" = paste(tabel_data$interval_longest[1], "to",
                                                   tabel_data$interval_longest[2], sep = " "),
                        "Price change over longest interval" = tabel_data$price_change_longest,
-                       "Mean start day" = tabel_data$mean_startday,
-                       "Mean end day" = tabel_data$mean_endday)
+                       "Min start day" = tabel_data$min_startday,
+                       "Max end day" = tabel_data$max_endday)
 
 
 w <- Hmisc::latex(Output_tabel %>% base::t(),
                   file = paste(Ticker_code,"2020.tex", sep = ""),
                   digits = 3)
 
+tabel_data <- Tabel_GSADF(gsadf = gsadf_d)
+
+Output_tabel <- data.frame("Count" = tabel_data$count,
+                       "$p$-value" = tabel_data$value,
+                       "Longest interval" = paste(tabel_data$interval_longest[1], "to",
+                                                  tabel_data$interval_longest[2], sep = " "),
+                       "Price change over longest interval" = tabel_data$price_change_longest,
+                       "Min start day" = tabel_data$min_startday,
+                       "Max end day" = tabel_data$max_endday)
+
+w <- Hmisc::latex(Output_tabel %>% base::t(),
+                  file = paste(Ticker_code,"2020_d.tex", sep = ""),
+                  digits = 3)
+
+tabel_data <- Tabel_GSADF(gsadf = gsadf_d_t)
+
+Output_tabel <- data.frame("Count" = tabel_data$count,
+                       "$p$-value" = tabel_data$value,
+                       "Longest interval" = paste(tabel_data$interval_longest[1], "to",
+                                                  tabel_data$interval_longest[2], sep = " "),
+                       "Price change over longest interval" = tabel_data$price_change_longest,
+                       "Min start day" = tabel_data$min_startday,
+                       "Max end day" = tabel_data$max_endday)
+
+w <- Hmisc::latex(Output_tabel %>% base::t(),
+                  file = paste(Ticker_code,"2020_d.tex", sep = ""),
+                  digits = 3)
 ```
 
 
@@ -135,4 +228,60 @@ gsadf_u$stock %>% View()
 
 ```
 
+
+
+```{r}
+
+end_day_data <- gsadf_u
+
+end_day_data$result <- tibble(gsadf_u$result) %>% filter(end_day == max(end_day))
+
+plot_GSADF(u = end_day_data,
+           d = NULL,
+           d_t = NULL,
+           p_restrict = 0.95,
+           start_date_tq_get = "2020-01-01",
+           image_name = NULL,
+           valuta = "USD",
+           aktie = "Activision Blizzard")
+
+
+
+
+```
+
+```{r}
+
+tibble(gsadf_d$result) %>% filter(p_val == max(p_val))
+
+which_rows_positive_mu <- c()
+for (i in seq_along(gsadf_d$result$estimate)) {
+  which_rows_positive_mu <- c(which_rows_positive_mu, ifelse(coefficients(gsadf_d$model_list[[i]])[1,1] > 0, yes = i,no = F))
+}
+
+tibble(gsadf_d$result[which_rows_positive_mu,]) %>% filter(p_val == max(p_val))
+
+restring_gsadf_d <- gsadf_d
+restring_gsadf_d$result <- tibble(gsadf_d$result[which_rows_positive_mu,]) %>% filter(p_val == max(p_val))
+
+
+plot_GSADF(u = NULL, d = restring_gsadf_d, d_t = NULL, p_restrict = 0.95, start_date_tq_get = "2020-01-01", image_name = NULL, valuta = "USD", aktie = "Airbus")
+
+```
+
+
+
+
+```{r}
+
+airbus <- tq_get(x = "AIR.PA",from = "2020-01-01", to = "2020-12-01") %>%
+  select(date, adjusted) %>% na.omit()
+
+plot(airbus)
+airbus_disc <- airbus
+airbus_disc$adjusted <- discount(airbus$adjusted, r = 0.10)
+
+plot(airbus_disc)
+
+```
 

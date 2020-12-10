@@ -1,4 +1,4 @@
-plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq_get = "2020-01-01",
+plot_GSADF <- function(u = NULL, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq_get = "2020-01-01",
                        image_name = NULL, valuta = "valuta", aktie = "aktie") {
   model_nr <- dplyr::case_when(is.null(d_t) & is.null(d) ~
   1, is.null(d_t) ~ 2, !is.null(d_t) ~ 3)
@@ -7,7 +7,7 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
     u
   } else if (model_nr == 2) {
     d
-  } else if (mode_nr == 3) {
+  } else if (model_nr == 3) {
     d_t
   }
   stock_data <- gsadf_result$stock
@@ -15,13 +15,13 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
     u = u, d_t = d_t, d = d,
     p_restrict = p_restrict
   )
-  plot_data_rect <- tibble::tibble(u$result) %>%
+  plot_data_rect <- tibble::tibble(gsadf_result$result) %>%
     dplyr::filter(p_val ==
       max(p_val)) %>%
     dplyr::filter(interval_length == max(interval_length)) %>%
-    dplyr::mutate(date_start = stock_data$date[start_day],
+    dplyr::mutate(date_start = stock_data$date[max(start_day,1)],
                   date_end = stock_data$date[end_day])
-  stock <- ggplot2::ggplot(data = u$stock, ggplot2::aes(
+  stock <- ggplot2::ggplot(data = gsadf_result$stock, ggplot2::aes(
     x = date,
     y = price
   )) +
@@ -57,7 +57,9 @@ plot_GSADF <- function(u, d = NULL, d_t = NULL, p_restrict = 0.95, start_date_tq
     )) +
     ggplot2::xlab("") +
     ggplot2::ylab("Count")
-  if (model_nr == 1) {
+  
+  
+  if (sum(!is.null(u), !is.null(d), !is.null(d_t)) == 1) {
     bubble <- bubble + ggplot2::theme(legend.position = "none")
   }
   if (!is.null(image_name)) {
